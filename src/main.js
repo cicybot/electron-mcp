@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app,webContents, BrowserWindow,session } = require('electron');
 const {screen } = require('electron')
 
 const express = require('express');
@@ -23,10 +23,10 @@ function startHttpServer() {
             if (!mainWindow) {
                 return res.status(500).json({ error: 'window not ready' });
             }
-
-            const image = await mainWindow.webContents.capturePage();
+            const id = req.query.id ? Number(req.query.id) : 1;
+            console.log('[screenshot] id =', id);
+            const image = await BrowserWindow.fromId(id).webContents.capturePage();
             const buffer = image.toPNG();
-
             res.setHeader('Content-Type', 'image/png');
             res.send(buffer);
         } catch (err) {
@@ -43,7 +43,10 @@ function startHttpServer() {
         try {
             const result = await handleMethod(method, params,{
                 mainWindow,
+                BrowserWindow,
                 screen,
+                createWindow,
+                WindowSites,
                 server:{
                     req,
                     res
@@ -67,35 +70,97 @@ function startHttpServer() {
     });
 }
 
-function createWindow() {
-    mainWindow = new BrowserWindow({
-        width: 1024,
-        height: 768,
+const WindowSites = new Map();
+function createWindow(account_index,url,options) {
+    if(!account_index){
+        account_index = 0
+    }
+    const currentWindowSites = WindowSites.has(account_index) ? WindowSites.get(account_index) : new Map()
+    if(currentWindowSites.get(url)){
+        const currentWin = currentWindowSites.get(url)
+        currentWin.win.show()
+        return currentWin
+    }
+    if(!options){
+        options = {}
+    }
+    if(!options.webPreferences){
+        options.webPreferences = {}
+    }
+
+    const p ='p_'+account_index
+    const win = new BrowserWindow({
+        ...options,
         webPreferences: {
+            webviewTag: true,
             nodeIntegration: true,
             contextIsolation: false,
+            partition: 'persist:' + p,
+            ...options.webPreferences
         }
     });
-    mainWindow.loadURL("http://192.168.100.58:5173/");
+    if(!mainWindow){
+        mainWindow = win
+    }
 
-    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-        if(level === 2 && message.indexOf("cElectron Security Warning") >0){
-            return;
+    const id = win.id
+    const key = `win_${id}`
+    const ses = win.webContents.session;
+    const {storagePath} = ses
+    const wcId = win.webContents.id;
+    currentWindowSites.set(url,{
+        id:win.id,
+        wcId,
+        win
+    })
+    WindowSites.set(account_index,currentWindowSites)
+    console.log("storagePath",storagePath)
+    console.log("wcId",wcId)
+    win.loadURL(url);
+    win.on("close",()=>{
+        const currentWindowSites = WindowSites.has(account_index) ? WindowSites.get(account_index) : new Map()
+        if(currentWindowSites){
+            currentWindowSites.delete(url)
+            WindowSites.set(account_index,currentWindowSites)
         }
-        console.log(`[renderer][${level}] ${message}`);
+
+    })
+    win.webContents.on(
+        'console-message',
+        (event) => {
+            const {
+                level,
+                message,
+                lineNumber,
+                sourceId
+            } = event;
+            if (
+                level === "warning" &&
+                message.includes('Electron Security Warning')
+            ) {
+                return;
+            }
+            console.log(`[${key}][renderer][${level}] ${message}`);
+        }
+    );
+    win.webContents.on('did-finish-load', async () => {
+        console.log(`[${key}] DOM ready`);
     });
 
-    // 页面加载完成
-    mainWindow.webContents.on('did-finish-load', async () => {
-        console.log('[main] DOM ready');
+    return win;
+}
+function createMainWindow(){
+    createWindow(0,"about:blank",{
+        width: 360,
+        height: 360,
+        x:0,
+        y:0
     });
 }
-
-
 app.whenReady().then(() => {
     console.log('app ready');
     startHttpServer();
-    createWindow();
+    createMainWindow()
 });
 
 app.on('window-all-closed', () => {
@@ -104,5 +169,5 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
 });
