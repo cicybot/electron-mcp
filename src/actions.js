@@ -1,4 +1,5 @@
 
+
 function getProcessInfo(){
     const {defaultApp,platform,arch,pid,env,argv,execPath,versions} = process
     const getCPUUsage = process.getCPUUsage()
@@ -7,7 +8,6 @@ function getProcessInfo(){
     const getProcessMemoryInfo = process.getProcessMemoryInfo()
     const getSystemMemoryInfo = process.getSystemMemoryInfo()
     const getSystemVersion = process.getSystemVersion()
-
 
     return {
         processId:pid,
@@ -26,52 +26,79 @@ function getProcessInfo(){
         }
     }
 }
+
+function windowSitesToJSON(windowSites) {
+    const result = {};
+    for (const [groupKey, siteMap] of windowSites.entries()) {
+        result[groupKey] = {};
+        for (const [url, info] of siteMap.entries()) {
+            result[groupKey][url] = {
+                id: info.id,
+                wcId: info.wcId
+            };
+        }
+    }
+    return result;
+}
 export async function handleMethod(method,params,{
     mainWindow,
     screen,
+    createWindow,
+    BrowserWindow,
+    WindowSites,
     server:{
         req,
         res
     }
 }){
-    const mainWebContents = mainWindow.webContents
+    let win;
+    let wc
+    console.log("[ACT]",method)
+    console.log("[PARAMS]",params)
+    if(params && params.win_id){
+        win = BrowserWindow.fromId(params.win_id)
+        wc = win.webContents
+    }
     let result;
-    console.log("[ACT]",method,params)
     switch (method) {
+        case 'ping':
+            result = 'pong';
+            break;
         case 'info':
             const primaryDisplay = screen.getPrimaryDisplay()
             const { width, height } = primaryDisplay.workAreaSize
-
             return {
                 process:getProcessInfo(),
                 screen:{width, height },
                 getBounds:mainWindow.getBounds(),
                 getContentBounds:mainWindow.getContentBounds()
             };
+        case 'openWindow':
+            const {id} = createWindow(params?.account_index||0,params?.url);
+            return {id}
+        case 'getWindows':
+            return windowSitesToJSON(WindowSites)
         case 'getBounds':
-            return mainWindow.getBounds();
+            return wc.getBounds();
         case 'loadURL':
-            const {url} = params
-            mainWebContents.loadURL(url);
+            wc.loadURL(params?.url);
             break;
         case 'executeJavaScript':
             const {code} = params
-            result = await mainWebContents.executeJavaScript(code);
+            result = await wc.executeJavaScript(code);
             break
         case 'getURL':
-            return mainWebContents.getURL();
+            return wc.getURL();
         case 'reload':
-            return mainWebContents.reload();
+            return wc.reload();
         case 'getTitle':
-            return mainWebContents.getTitle();
+            return wc.getTitle();
         case 'getUserAgent':
-            return mainWebContents.getUserAgent();
-        case 'ping':
-            result = 'pong';
-            break;
+            return wc.getUserAgent();
         case 'screenshot':
-            const image = await mainWebContents.capturePage();
+            const image = await wc.capturePage();
             result = image.toPNG().toString('base64');
+            console.log(result)
             break;
         default:
             return res.status(404).json({ error: 'unknown method' });

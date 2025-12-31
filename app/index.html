@@ -9,34 +9,6 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      function getProcessInfo(){
-        const {defaultApp,platform,arch,pid,env,argv,execPath,versions} = process
-        const getCPUUsage = process.getCPUUsage()
-        const getHeapStatistics = process.getHeapStatistics()
-        const getBlinkMemoryInfo = process.getBlinkMemoryInfo()
-        const getProcessMemoryInfo = process.getProcessMemoryInfo()
-        const getSystemMemoryInfo = process.getSystemMemoryInfo()
-        const getSystemVersion = process.getSystemVersion()
-        return {
-          processId:pid,
-          is64Bit: arch === 'x64' || arch === 'arm64',
-          platform,
-          versions,
-          defaultApp,
-          else:{
-            env,argv,execPath,
-            CPUUsage:getCPUUsage,
-            HeapStatistics:getHeapStatistics,
-            BlinkMemoryInfo:getBlinkMemoryInfo,
-            ProcessMemoryInfo:getProcessMemoryInfo,
-            SystemMemoryInfo:getSystemMemoryInfo,
-            SystemVersion:getSystemVersion
-          }
-        }
-      }
-      console.log(JSON.stringify(getProcessInfo()))
-
-    </script>
+    <script src="/script.js"></script>
   </body>
 </html>
