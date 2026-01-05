@@ -47,7 +47,8 @@ ARG UID=1000
 ARG GID=1000
 
 RUN groupadd --gid $GID $USERNAME && \
-    useradd --uid $UID --gid $GID -m $USERNAME
+    useradd --uid $UID --gid $GID -m $USERNAME && \
+     && usermod -aG sudo $USERNAME
 
 # -----------------------------
 # 4. 切换用户 & 安装 Electron
@@ -65,16 +66,11 @@ RUN mkdir -p /home/${USERNAME}/.npm-global && \
 WORKDIR /data
 
 
-# v 1.0.3
+# v 1.0.4
 # Expose Express port
 EXPOSE 3456
-
 COPY --chmod=755 ./entry.sh /entry.sh
-COPY ./electron/package.json /data/package.json
-RUN npm install
+ADD --chown=electron:electron ./electron /data
 
-COPY ./electron/main.js /data/main.js
-COPY ./electron/cron.js /data/cron.js
-COPY ./electron/run.sh /data/run.sh
 
 ENTRYPOINT ["/entry.sh"]
