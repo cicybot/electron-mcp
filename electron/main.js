@@ -1,9 +1,8 @@
-const { app,Menu, BrowserWindow,session } = require('electron');
-const {screen } = require('electron')
+const { app, Menu, BrowserWindow, session, screen } = require('electron');
 const cors = require('cors');
-
 const contextMenu = require('electron-context-menu').default || require('electron-context-menu');
 const express = require('express');
+const path = require('path');
 
 //https://www.npmjs.com/package/electron-context-menu
 contextMenu({
@@ -13,11 +12,13 @@ contextMenu({
 let mainWindow;
 let server;
 const WindowSites = new Map();
-const RequestsMap =  [];
+const RequestsMap = [];
+const MAX_REQUEST_LOGS = 1000;
 let requestIndex = 0;
 
-app.setName("Electron")
-async function setCookies(wc,cookies) {
+app.setName("Electron");
+
+async function setCookies(wc, cookies) {
     for (const c of cookies) {
         const cookie = { ...c }; // don't mutate original
         const isSecurePrefix = cookie.name.startsWith("__Secure-");
@@ -44,55 +45,59 @@ async function setCookies(wc,cookies) {
 
         if (!cookie.path) cookie.path = "/";
 
-        await wc.session.cookies.set({
-            url,
-            name: cookie.name,
-            value: cookie.value,
+        try {
+            await wc.session.cookies.set({
+                url,
+                name: cookie.name,
+                value: cookie.value,
 
-            path: cookie.path,
-            domain: cookie.domain, // may be undefined when __Host-
+                path: cookie.path,
+                domain: cookie.domain, // may be undefined when __Host-
 
-            httpOnly: !!cookie.httpOnly,
-            secure: !!cookie.secure,
+                httpOnly: !!cookie.httpOnly,
+                secure: !!cookie.secure,
 
-            expirationDate: cookie.session ? undefined : cookie.expirationDate,
+                expirationDate: cookie.session ? undefined : cookie.expirationDate,
 
-            sameSite:
-                cookie.sameSite === "no_restriction" ? "no_restriction" :
-                    cookie.sameSite === "lax" ? "lax" :
-                        cookie.sameSite === "strict" ? "strict" :
-                            "unspecified",
-        });
+                sameSite:
+                    cookie.sameSite === "no_restriction" ? "no_restriction" :
+                        cookie.sameSite === "lax" ? "lax" :
+                            cookie.sameSite === "strict" ? "strict" :
+                                "unspecified",
+            });
+        } catch (e) {
+            console.error("Failed to set cookie", cookie.name, e);
+        }
     }
 }
-function getAppInfo(){
 
-    const {defaultApp,platform,arch,pid,env,argv,execPath,versions} = process
-    const getCPUUsage = process.getCPUUsage()
-    const getHeapStatistics = process.getHeapStatistics()
-    const getBlinkMemoryInfo = process.getBlinkMemoryInfo()
-    const getProcessMemoryInfo = process.getProcessMemoryInfo()
-    const getSystemMemoryInfo = process.getSystemMemoryInfo()
-    const getSystemVersion = process.getSystemVersion()
+function getAppInfo() {
+    const { defaultApp, platform, arch, pid, env, argv, execPath, versions } = process;
+    const getCPUUsage = process.getCPUUsage();
+    const getHeapStatistics = process.getHeapStatistics();
+    const getBlinkMemoryInfo = process.getBlinkMemoryInfo();
+    const getProcessMemoryInfo = process.getProcessMemoryInfo();
+    const getSystemMemoryInfo = process.getSystemMemoryInfo();
+    const getSystemVersion = process.getSystemVersion();
 
     return {
-        session:session.defaultSession.getStoragePath(),
+        session: session.defaultSession.getStoragePath(),
         userData: app.getPath('userData'),
-        processId:pid,
+        processId: pid,
         is64Bit: arch === 'x64' || arch === 'arm64',
         platform,
         versions,
         defaultApp,
-        else:{
-            env,argv,execPath,
-            CPUUsage:getCPUUsage,
-            HeapStatistics:getHeapStatistics,
-            BlinkMemoryInfo:getBlinkMemoryInfo,
-            ProcessMemoryInfo:getProcessMemoryInfo,
-            SystemMemoryInfo:getSystemMemoryInfo,
-            SystemVersion:getSystemVersion
+        else: {
+            env, argv, execPath,
+            CPUUsage: getCPUUsage,
+            HeapStatistics: getHeapStatistics,
+            BlinkMemoryInfo: getBlinkMemoryInfo,
+            ProcessMemoryInfo: getProcessMemoryInfo,
+            SystemMemoryInfo: getSystemMemoryInfo,
+            SystemVersion: getSystemVersion
         }
-    }
+    };
 }
 
 function windowSitesToJSON(windowSites) {
@@ -108,22 +113,17 @@ function windowSitesToJSON(windowSites) {
     }
     return result;
 }
-async function handleMethod(method,params,{
-    server:{
-        req,
-        res
-    }
-}){
-    let win;
-    let wc
-    console.log("[ACT]",method)
-    console.log("[PARAMS]",params)
-    if( params && params.win_id){
-        win = BrowserWindow.fromId(params.win_id)
-        if(win){
-            wc = win.webContents
-        }
 
+async function handleMethod(method, params, { server: { req, res } }) {
+    let win;
+    let wc;
+    console.log("[ACT]", method);
+    console.log("[PARAMS]", params);
+    if (params && params.win_id) {
+        win = BrowserWindow.fromId(params.win_id);
+        if (win) {
+            wc = win.webContents;
+        }
     }
     let result;
     switch (method) {
@@ -131,62 +131,78 @@ async function handleMethod(method,params,{
             result = 'pong';
             break;
         case 'info':
-            const primaryDisplay = screen.getPrimaryDisplay()
-            const { width, height } = primaryDisplay.workAreaSize
+            const primaryDisplay = screen.getPrimaryDisplay();
+            const { width, height } = primaryDisplay.workAreaSize;
             return {
-                process:getAppInfo(),
-                screen:{width, height },
+                process: getAppInfo(),
+                screen: { width, height },
             };
         case 'openWindow':
-            const {id} = createWindow(params?.account_index||0,params?.url,params?.options||{},params?.others||{});
-            return {id}
+            // Added await here to ensure we get the window object before destructuring
+            const winObj = await createWindow(params?.account_index || 0, params?.url, params?.options || {}, params?.others || {});
+            return { id: winObj.id };
         case 'getRequests':
-            return RequestsMap
+            return RequestsMap;
         case 'getWindows':
-            return windowSitesToJSON(WindowSites)
+            return windowSitesToJSON(WindowSites);
         case 'getBounds':
-            return wc.getBounds();
+            return wc ? wc.getBounds() : null;
         case 'loadURL':
-            wc.loadURL(params?.url);
+            if (wc) wc.loadURL(params?.url);
             break;
         case 'importCookies':
-            const {cookies} = params
-            await setCookies(wc,cookies)
-            return {}
+            if (wc) {
+                const { cookies } = params;
+                await setCookies(wc, cookies);
+            }
+            return {};
         case 'exportCookies':
-            const {options} = params
-            return await wc.session.cookies.get(options||{})
+            if (wc) {
+                const { options } = params;
+                return await wc.session.cookies.get(options || {});
+            }
+            return [];
         case 'executeJavaScript':
-            const {code} = params
-            result = await wc.executeJavaScript(code);
-            break
+            if (wc) {
+                const { code } = params;
+                result = await wc.executeJavaScript(code);
+            }
+            break;
         case 'getURL':
-            return wc.getURL();
+            return wc ? wc.getURL() : '';
         case 'reload':
-            return wc.reload();
+            return wc ? wc.reload() : null;
         case 'getTitle':
-            return wc.getTitle();
+            return wc ? wc.getTitle() : '';
         case 'setUserAgent':
-            const {userAgent} = params||{}
-            return wc.setUserAgent(userAgent);
+            if (wc) {
+                const { userAgent } = params || {};
+                return wc.setUserAgent(userAgent);
+            }
+            return null;
         case 'screenshot':
-            const image = await getScreenshot(wc)
-            result = image.toPNG().toString('base64');
-            console.log(result)
+            if (wc) {
+                const image = await getScreenshot(wc);
+                result = image.toPNG().toString('base64');
+                // console.log(result); // Reduced log noise
+            }
             break;
         default:
             return res.status(404).json({ error: 'unknown method' });
     }
-    return result
+    return result;
 }
-async function getScreenshot(wc){
+
+async function getScreenshot(wc) {
+    if (!wc) return null;
     const image = await wc.capturePage();
     const scaled = image.resize({
         width: Math.floor(image.getSize().width / 2),
         height: Math.floor(image.getSize().height / 2),
     });
-    return scaled
+    return scaled;
 }
+
 /* -----------------------------
  * Express HTTP Server
  * ----------------------------- */
@@ -194,19 +210,23 @@ function startHttpServer() {
     const appServer = express();
     appServer.use(cors()); // enable CORS for all origins
     appServer.use(express.json({ limit: '50mb' }));
-    appServer.get('/', async (req, res) => {
-        res.send("hi")
-    });
+
+    // Serve static files from the application directory (index.html, index.js)
+    appServer.use(express.static(__dirname));
+
     // 📸 Screenshot endpoint
     appServer.get('/screenshot', async (req, res) => {
         try {
-            if (!mainWindow) {
-                return res.status(500).json({ error: 'window not ready' });
-            }
-            const id = req.query.id ? Number(req.query.id) : 1;
-            console.log('[screenshot] id =', id);
+            // Note: mainWindow is the initial window, but ID param should override
+            const id = req.query.id ? Number(req.query.id) : (mainWindow ? mainWindow.id : 1);
+            // console.log('[screenshot] id =', id);
 
-            const scaled = await getScreenshot(BrowserWindow.fromId(id).webContents)
+            const win = BrowserWindow.fromId(id);
+            if (!win) {
+                return res.status(404).json({ error: 'Window not found' });
+            }
+
+            const scaled = await getScreenshot(win.webContents);
             const buffer = scaled.toPNG();
             res.setHeader('Content-Type', 'image/png');
             res.send(buffer);
@@ -218,17 +238,20 @@ function startHttpServer() {
 
     appServer.post('/rpc', async (req, res) => {
         const { method, params } = req.body || {};
-        console.log(req.body)
+        // console.log(req.body); // Reduced log noise
         if (!method) {
             return res.status(400).json({ error: 'method is required' });
         }
         try {
-            const result = await handleMethod(method, params,{
-                server:{
+            const result = await handleMethod(method, params, {
+                server: {
                     req,
                     res
                 }
-            })
+            });
+            // Handle if result is the response object (e.g. 404)
+            if (result && result.headersSent) return;
+
             res.json({
                 ok: true,
                 result
@@ -242,41 +265,45 @@ function startHttpServer() {
             });
         }
     });
-    const port = process.env.PORT || 3456
+    const port = process.env.PORT || 3456;
     server = appServer.listen(port, '0.0.0.0', () => {
-        const url = `http:/127.0.0.1:${port}`
+        const url = `http://127.0.0.1:${port}`;
         console.log(`[express] listening on ${url}`);
-        createWindow(0,url)
+        createWindow(0, url);
     });
 }
 
-async function createWindow(account_index,url,options,others) {
-    if(!account_index){
-        account_index = 0
+async function createWindow(account_index, url, options, others) {
+    if (!account_index) {
+        account_index = 0;
     }
-    const currentWindowSites = WindowSites.has(account_index) ? WindowSites.get(account_index) : new Map()
-    if(currentWindowSites.get(url)){
-        const currentWin = currentWindowSites.get(url)
-        currentWin.win.show()
-        return currentWin
-    }
-    if(!options){
-        options = {}
-    }
-    const {userAgent,cookies,openDevtools} = others||{}
-    if(userAgent){
-        delete options["userAgent"]
-    }
-    if(!options.webPreferences){
-        options.webPreferences = {}
+    const currentWindowSites = WindowSites.has(account_index) ? WindowSites.get(account_index) : new Map();
+    if (currentWindowSites.get(url)) {
+        const currentWinEntry = currentWindowSites.get(url);
+        if (currentWinEntry.win && !currentWinEntry.win.isDestroyed()) {
+            currentWinEntry.win.show();
+            return currentWinEntry.win;
+        }
     }
 
-    const p ='p_'+account_index
+    if (!options) {
+        options = {};
+    }
+    const { userAgent, cookies, openDevtools, proxy } = others || {};
+    if (userAgent) {
+        // Remove userAgent from options if it exists, handled via webContents
+        if (options.userAgent) delete options.userAgent;
+    }
+    if (!options.webPreferences) {
+        options.webPreferences = {};
+    }
+
+    const p = 'p_' + account_index;
     const win = new BrowserWindow({
-        width: 1920,
-        height: 1280,
-        x:0,
-        y:0,
+        width: 360,
+        height: 768,
+        x: 0,
+        y: 0,
         ...options,
         webPreferences: {
             partition: 'persist:' + p,
@@ -286,55 +313,83 @@ async function createWindow(account_index,url,options,others) {
             ...options.webPreferences
         }
     });
-    if(cookies){
-        await setCookies(win.webContents,cookies)
+    console.log(proxy)
+    if (proxy) {
+        await win.webContents.session.setProxy({
+            proxyRules: proxy
+        });
+        console.log(`[${p}] Proxy set to: ${proxy}`);
     }
 
-    if(openDevtools){
-        win.webContents.openDevTools(openDevtools);
+    if (cookies) {
+        await setCookies(win.webContents, cookies);
     }
 
-    if(!mainWindow){
-        mainWindow = win
+    if (openDevtools) {
+        win.webContents.openDevTools();
     }
 
-    const id = win.id
-    const key = `win_${id}`
+    if (!mainWindow) {
+        mainWindow = win;
+    }
+
+    const id = win.id;
+    const key = `win_${id}`;
     const ses = win.webContents.session;
-    const {storagePath} = ses
+    const { storagePath } = ses;
     const wcId = win.webContents.id;
-    if(userAgent){
-        win.webContents.setUserAgent(
-            userAgent
-        );
+
+    if (userAgent) {
+        win.webContents.setUserAgent(userAgent);
     }
 
-    currentWindowSites.set(url,{
-        id:win.id,
+    currentWindowSites.set(url, {
+        id: win.id,
         wcId,
         win
-    })
-    WindowSites.set(account_index,currentWindowSites)
-    console.log("storagePath",storagePath)
-    console.log("wcId",wcId)
+    });
+    WindowSites.set(account_index, currentWindowSites);
+
+    console.log("storagePath", storagePath);
+    console.log("wcId", wcId);
+
     win.loadURL(url);
-    win.on("close",()=>{
-        const currentWindowSites = WindowSites.has(account_index) ? WindowSites.get(account_index) : new Map()
-        if(currentWindowSites){
-            currentWindowSites.delete(url)
-            WindowSites.set(account_index,currentWindowSites)
+
+    win.on("close", () => {
+        const currentWindowSites = WindowSites.has(account_index) ? WindowSites.get(account_index) : new Map();
+        if (currentWindowSites) {
+            currentWindowSites.delete(url);
+            WindowSites.set(account_index, currentWindowSites);
         }
-    })
+    });
+
     win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
-        const {url,method,requestHeaders} = details
+        const { url, method, requestHeaders } = details;
+
+        // Ignore RPC calls to self to avoid log spam and recursion
+        if (url.includes('127.0.0.1') && url.includes(process.env.PORT || '3456')) {
+            callback({ cancel: false });
+            return;
+        }
 
         RequestsMap.push({
-            index:requestIndex++,
-            url,requestHeaders,win_id:id,method
-        })
-        console.log('REQUEST:', id,details.url);
+            index: requestIndex++,
+            url,
+            requestHeaders,
+            win_id: id,
+            method,
+            timestamp: Date.now() // Added timestamp for frontend display
+        });
+
+        // Cap the log size
+        if (RequestsMap.length > MAX_REQUEST_LOGS) {
+            RequestsMap.shift();
+        }
+
+        console.log('REQUEST:', id, details.url);
         callback({ cancel: false });
     });
+
     win.webContents.on(
         'console-message',
         (event) => {
@@ -345,7 +400,7 @@ async function createWindow(account_index,url,options,others) {
                 sourceId
             } = event;
             if (
-                level === "warning" &&
+                level === 2 && // Warning level
                 message.includes('Electron Security Warning')
             ) {
                 return;
@@ -353,8 +408,9 @@ async function createWindow(account_index,url,options,others) {
             console.log(`[${key}][renderer][${level}] ${message}`);
         }
     );
+
     win.webContents.on('did-finish-load', async () => {
-        console.log(`[${key}] DOM ready`,{account_index,id,wcId},win.webContents.getURL());
+        console.log(`[${key}] DOM ready`, { account_index, id, wcId }, win.webContents.getURL());
     });
 
     return win;
@@ -369,4 +425,3 @@ app.on('window-all-closed', () => {
     if (server) server.close();
     if (process.platform !== 'darwin') app.quit();
 });
-

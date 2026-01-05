@@ -1,7 +1,8 @@
-// const baseUrl = "http://127.0.0.1:3456"
-const baseUrl = "https://win-electron-3456.cicy.de5.net"
+const baseUrl = "http://127.0.0.1:3456"
+// const baseUrl = "https://win-electron-3456.cicy.de5.net"
 
 const post_rpc = async ({method,params})=>{
+  console.log("post_rpc",method,params)
   const res = await fetch(`${baseUrl}/rpc`,{
     method:"POST",
     headers: {
@@ -59,7 +60,8 @@ const openInElectron = async (tab)=>{
   const cookies = await chrome.cookies.getAll({ domain });
   console.log("openInElectron",domain,cookies)
   openWindow(url,{},{
-    cookies
+    cookies,
+    // proxy:"http://localhost:7897"
   })
 }
 
