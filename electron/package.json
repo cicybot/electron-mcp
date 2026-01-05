@@ -3,8 +3,7 @@
   "version": "1.0.1",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "start:dev": "PORT=3457 electron ."
+    "start": "electron ."
   },
   "dependencies": {
     "cors": "^2.8.5",

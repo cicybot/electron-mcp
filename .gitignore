@@ -1,6 +1,5 @@
-src/node_modules/
 .ipynb_checkpoints
 *.pyc
-src/node_modules
+node_modules
 .idea
 assets

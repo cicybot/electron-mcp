@@ -4,7 +4,6 @@ const cors = require('cors');
 
 const contextMenu = require('electron-context-menu').default || require('electron-context-menu');
 const express = require('express');
-const {openWindow} = require("./tests/utils");
 
 //https://www.npmjs.com/package/electron-context-menu
 contextMenu({
@@ -247,7 +246,7 @@ function startHttpServer() {
     server = appServer.listen(port, '0.0.0.0', () => {
         const url = `http:/127.0.0.1:${port}`
         console.log(`[express] listening on ${url}`);
-        openWindow(url)
+        createWindow(0,url)
     });
 }
 
