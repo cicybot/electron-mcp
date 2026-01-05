@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter,Response,Query
 
 import requests
+from common.utils import file_get_content
 
 logger = logging.getLogger(__name__)
 
@@ -26,29 +27,7 @@ def post_rpc(method,params = None):
     return res.json()
 @router.get("/dev")
 async def dev():
-    code = """
-(()=>{
-    
-    const keyword = "ACCEPT";
-    
-    const elements = Array.from(
-      document.querySelectorAll("button")
-    ).filter(el =>
-      el.innerText &&
-      el.innerText.trim().toUpperCase() === keyword
-    );
-    
-    console.log("Found ACCEPT elements:", elements);
-    
-    if (elements.length > 0) {
-        elements[0].click();
-        console.log("Clicked ACCEPT button");
-        return true;
-    }
-
-    return false;
-})()
-    """
+    code = file_get_content("/Users/data/electron/electron-headless/playground/test.js")
     return post_rpc("executeJavaScript",{
         "code":code,
         "win_id":1

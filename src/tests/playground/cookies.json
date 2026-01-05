@@ -1,0 +1,67 @@
+[
+  {
+    "domain": "automatic-invention-7v66r6vwvwj7fwwqq.github.dev",
+    "expirationDate": 1767529526.477818,
+    "hostOnly": true,
+    "httpOnly": true,
+    "name": "codespace.session_v2",
+    "path": "/",
+    "sameSite": "lax",
+    "secure": true,
+    "session": false,
+    "storeId": null,
+    "value": "djAxfWDzitzDPYSzoDcO/mqAvVeF/zSDMpMXUgGiwHpNqzwFpHPVAYtenek="
+  },
+  {
+    "domain": "automatic-invention-7v66r6vwvwj7fwwqq.github.dev",
+    "expirationDate": 1794606672.478054,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "cs-auth-attempts",
+    "path": "/",
+    "sameSite": null,
+    "secure": true,
+    "session": false,
+    "storeId": null,
+    "value": "0"
+  },
+  {
+    "domain": "automatic-invention-7v66r6vwvwj7fwwqq.github.dev",
+    "expirationDate": 1794606672.47757,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "cs-feature-flags",
+    "path": "/",
+    "sameSite": null,
+    "secure": true,
+    "session": false,
+    "storeId": null,
+    "value": "{\"developer\":false,\"detailedActivityMonitor\":false,\"vscodeAccountSwitching\":true,\"enableSmbDiagnosticContinuousMonitoring\":false,\"enableSmbDiagnosticOnAnomalyMonitoring\":false,\"useEarlyWorkbenchWebClient\":true,\"useCoiWebClient\":false,\"remapUserNamespace\":false,\"removeConnectRetriesWebClient\":true,\"storageV2ExhaustiveValidation\":false,\"forcePushShutdownTelemetry\":true,\"useNewJupyterApi\":true,\"improvedWarmupContainerReuse\":true,\"storageV2ComprehensiveDiagnosticsCollection\":false,\"usingCopilotWorkspaceConfig\":false,\"copilotWorkspace\":false,\"hostnameSpecificGitCredentialHelper\":true,\"storageV2ForcedFlushes\":false,\"storageV2AdvancedFsLogs\":false,\"storageV2DisableIoUring\":false,\"storageV2DisableCifsPrefetch\":true,\"environmentChangesMonitorStopsWatcher\":true,\"storageV2AggressivePrefetch\":false,\"storageV2ExtremePrefetch\":false}"
+  },
+  {
+    "domain": "automatic-invention-7v66r6vwvwj7fwwqq.github.dev",
+    "expirationDate": 1794606672.477357,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "cs-workbench-type",
+    "path": "/",
+    "sameSite": null,
+    "secure": true,
+    "session": false,
+    "storeId": null,
+    "value": "codespaces"
+  },
+  {
+    "domain": ".github.dev",
+    "expirationDate": 1798943425,
+    "hostOnly": false,
+    "httpOnly": false,
+    "name": "ph_phc_4URIAm1uYfJO7j8kWSe0J8lc8IqnstRLS7Jx8NcakHo_posthog",
+    "path": "/",
+    "sameSite": "lax",
+    "secure": true,
+    "session": false,
+    "storeId": null,
+    "value": "%7B%22%24device_id%22%3A%22019b819a-849b-7f1e-bea0-6c056b5b4216%22%2C%22distinct_id%22%3A%22a6152b937a93dd894401df8ab3a2877d83e859e279eccc01f065b2501ca5652d%23f924d85d-5f48-4754-b885-c80386bb020c%22%2C%22%24sesid%22%3A%5B1767407425318%2C%22019b819a-84af-7f75-923d-fe5dfcdaf5b8%22%2C1767405946019%5D%2C%22%24epp%22%3Atrue%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22%24direct%22%2C%22u%22%3A%22https%3A%2F%2Fpsychic-lamp-q7jj9j76754qcx4g6-5678.app.github.dev%2Fsetup%22%7D%7D"
+  }
+]
