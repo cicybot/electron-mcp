@@ -36699,7 +36699,9 @@ var WindowSites = /* @__PURE__ */ new Map();
 var RequestsMap = [];
 var MAX_REQUEST_LOGS = 1e3;
 var requestIndex = 0;
-app2.setName("Electron");
+var isLocal = process.env.IS_LOCAL === "true";
+console.log("IS_LOCAL", isLocal, process.env.IS_LOCAL === "true");
+app2.setName(process.env.APP_NAME || "Electron");
 async function handleMethod(method, params, { server: { req, res } }) {
   let win;
   let wc;
@@ -36736,6 +36738,40 @@ async function handleMethod(method, params, { server: { req, res } }) {
         body: audioBuffer
       });
       result = await response.json();
+      break;
+    }
+    case "downloadMedia1": {
+      const { session: session2 } = mainWindow.webContents;
+      session2.setDownloadPath(MediaDir);
+      const { mediaUrl: mediaUrl2 } = params;
+      const url2 = "https://v3-dy-o.zjcdn.com/21a9e1d82dbbb17c040a1ca41910381b/695e6db8/video/tos/cn/tos-cn-ve-15/oskPGeZnBIzGRNfvsBSALCJfgb77AzKUhBpcpt/?a=6383&ch=26&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=592&bt=592&cs=0&ds=6&ft=CZdgCYlIDyjNNRVQ9weiKYShd.6HI7103-ApQX&mime_type=video_mp4&qs=12&rc=ZzZmaDkzODhkNWczZzk4ZUBpamU8anA5cjd3NzMzNGkzM0BfNWAwNTZiXzQxNTAwMTZjYSNuMmdhMmRzbWNhLS1kLTBzcw%3D%3D&btag=80000e00030000&cc=1f&cquery=100w_100B_100H_100K_100o&dy_q=1767785032&feature_id=0ea98fd3bdc3c6c14a3d0804cc272721&l=2026010719235158364BC453BB6C01A01A&req_cdn_type=&__vid=7575015889800531200";
+      session2.on("will-download", (event, item) => {
+        const original = item.getFilename();
+        const mime = item.getMimeType();
+        const ext2 = path3.extname(original);
+        const newName = `my_new_name_${Date.now()}${ext2}`;
+        const url3 = item.getURL();
+        console.log("Download started:");
+        console.log("  Filename:", original);
+        console.log("  MIME type:", mime);
+        console.log("  URL:", url3);
+        const savePath = path3.join(MediaDir, newName);
+        item.setSavePath(savePath);
+        item.resume();
+        item.on("updated", (event2, state) => {
+          if (state === "progressing") {
+            console.log(`Downloading: ${item.getReceivedBytes()}/${item.getTotalBytes()}`);
+          }
+        });
+        item.once("done", (event2, state) => {
+          if (state === "completed") {
+            console.log(`Download finished`);
+          } else {
+            console.log(`Download failed: ${state}`);
+          }
+        });
+      });
+      await session2.downloadURL(url2);
       break;
     }
     case "downloadMedia":
@@ -36924,7 +36960,11 @@ async function createWindow(account_index, url, options, others) {
   if (!options) {
     options = {};
   }
-  const { userAgent, cookies, openDevtools, proxy } = others || {};
+  const { userAgent, cookies, openDevtools, proxy, wrapUrl } = others || {};
+  if (!wrapUrl) {
+    url = `${isLocal ? "http://127.0.0.1:3455" : "https://render.cicy.de5.net"}/render?u=${encodeURIComponent(url)}`;
+  }
+  console.log(isLocal, url);
   if (userAgent) {
     if (options.userAgent) delete options.userAgent;
   }
@@ -36938,6 +36978,10 @@ async function createWindow(account_index, url, options, others) {
     x: 0,
     y: 0,
     ...options,
+    args: [
+      "--safebrowsing-disable-download-protection",
+      "--safebrowsing-disable-extension-blacklist"
+    ],
     webPreferences: {
       partition: "persist:" + p,
       // webviewTag: true,
@@ -36991,7 +37035,7 @@ async function createWindow(account_index, url, options, others) {
       callback({ cancel: false });
       return;
     }
-    if (!win.isDestroyed()) {
+    if (win.isDestroyed()) {
       return;
     }
     win.webContents.executeJavaScript(`
@@ -37042,8 +37086,9 @@ if(window.__onBeforeSendHeaders){
   );
   win.webContents.on("did-finish-load", async () => {
     console.log(`[${key}] DOM ready`, { account_index, id, wcId }, win.webContents.getURL());
+    console.log(path3.join(__dirname, "content.js"));
     const content_js = fs2.readFileSync(path3.join(__dirname, "content.js"));
-    win.webContents.executeJavaScript(content_js);
+    win.webContents.executeJavaScript(content_js.toString());
   });
   return win;
 }
@@ -37054,9 +37099,9 @@ app2.whenReady().then(() => {
   console.log("app ready");
   startHttpServer();
 });
-app2.on("window-all-closed", () => {
-  if (server) server.close();
-  if (process.platform !== "darwin") app2.quit();
+app2.on("before-quit", (event) => {
+  console.log("before-quit");
+  event.preventDefault();
 });
 /*! Bundled license information:
 
