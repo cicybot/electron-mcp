@@ -8,3 +8,4 @@ cd ..
 mkdir render/dist/electron
 echo "Copy electron main and content.js"
 cp -a app/dist/* render/dist/electron
+lw -alh render/dist/electron
