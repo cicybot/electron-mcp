@@ -1,15 +1,185 @@
 import './App.css'
+import {useEffect, useRef, useState} from "react";
+import View from "./View"
+const baseUrl = "http://127.0.0.1:3456"
 
+const post_rpc = async ({method,params}:any)=>{
+    const res = await fetch(`${baseUrl}/rpc`,{
+        method:"POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body:JSON.stringify({method,params})
+    })
+    const body = await res.json()
+
+    return body
+}
 function App() {
+    const [mediaUrl, setMediaUrl] = useState("")
+    const [mediaInfo, setMediaInfo] = useState<any>(null)
+    const [comments, setComments] = useState<any>(null)
+    const [title, setTitle] = useState("")
+    const [currentUrl, setCurrentUrl] = useState("")
+    //@ts-ignore
+    window.onMessage = ({action,payload}:any)=>{
+        console.log("onMessage",action,payload)
+        switch (action) {
+            case "onMedia":
+                const {mediaUrl} = payload
+                setMediaUrl(mediaUrl)
+                break
+        }
+
+    }
+    const uri = new URL(location.href)
+    const url = uri.searchParams.get("u")!
+    const webviewTag = useRef<null|any>(null)
+    const [webContentsId, setWebContentId] = useState(null)
+    useEffect(() => {
+        if(!webviewTag.current){
+            return
+        }
+        const webview = webviewTag.current
+        webview.addEventListener('dom-ready', () => {
+            setWebContentId(webview.getWebContentsId())
+            setTitle(webview.getTitle())
+            setCurrentUrl(webview.getURL())
+        })
+
+        webview.addEventListener('page-title-updated', ({title}:any) => {
+            setTitle(title)
+        })
+    }, [webviewTag]);
+    const sideWidth = 300
     return (
-        <div>
-            <h2>local</h2>
-            <input type="text" id={"input"}/>
-            <div style={{width:"100vw",height:"calc(100vh - 132px)"}}>
-                <webview partition={"persist:p_0"} style={{width:"100%",height:"100%"}}
-                         src={"https://www.google.com"} ></webview>
-            </div>
-        </div>
+        <View w100vw h100vh relative>
+            <View absFull right={sideWidth}>
+                <webview ref={webviewTag} partition={"persist:p_0"} style={{width:"100%",height:"100%"}}
+                         src={url} ></webview>
+
+            </View>
+            <View abs top0 bottom0 right0 w={sideWidth} p12 borderBox overflowYAuto>
+                <View w100p>
+                    <View json={{
+                        mediaInfo,
+                        webContentsId,mediaUrl,
+                        currentUrl,title,
+                        comments
+                    }}></View>
+                </View>
+                <View mb12 rowVCenter>
+                    <button onClick={async ()=>{
+                        const res = await post_rpc({
+                            method:"executeJavaScript",
+                            params:{
+                                code:`
+(()=>{
+
+
+  const el = document.querySelector(".comment-mainContent")
+    
+  const items = el.querySelectorAll('[data-e2e="comment-item"]');
+
+  const result = [];
+
+ function cleanCommentText(rawText) {
+  return rawText
+    // replace multiple types of line breaks with a single space
+    .replace(/\\r?\\n/g, " ")
+    .replace(/\\b(展开|回复|分享|…)\\b/g, "")
+    // collapse multiple spaces into one
+    .replace(/\\s+/g, " ")
+    // trim start/end
+    .trim();
+}
+  items.forEach(item => {
+
+    const text= cleanCommentText(item.innerText)
+    result.push({ text});
+  });
+  return result;
+})()
+`,
+                                wc_id:webContentsId
+                            }
+                        })
+                        console.log(res.result)
+                        setComments({
+                            ts:Date.now(),
+                            comments:res.result
+                        })
+                    }}>GetComments</button>
+
+                    <View w12 />
+                    <button onClick={()=>{
+                        //document.querySelector(".comment-mainContent")
+                        post_rpc({
+                            method:"executeJavaScript",
+                            params:{
+                                code:`
+document.querySelectorAll('div[id^="login-full-panel-"]').forEach(el => el.remove());
+`,
+                                wc_id:webContentsId
+                            }
+                        })
+                    }}>ClearLogin</button>
+                </View>
+                <View rowVCenter>
+                    <button onClick={()=>{
+                        post_rpc({
+                            method:"openDevTools",
+                            params:{
+                                wc_id:webContentsId
+                            }
+                        })
+                    }}>DevTools</button>
+                    <View w12 />
+
+                    <View w12 />
+                    <View hide={!mediaUrl}>
+                        <button onClick={async ()=>{
+                            const {result} =  await post_rpc({
+                                method:"downloadMedia",
+                                params:{
+                                    mediaUrl,
+                                    name:"douyin/"+title.substring(0,10),
+                                    title,
+                                    url:currentUrl,
+                                    ext:"mp4",
+                                    showWin:true
+                                }
+                            })
+                            setMediaInfo(result)
+                        }}>FetchVideo</button>
+                    </View>
+
+                    <View w12 />
+                   <View >
+
+                       <button onClick={async ()=>{
+                           await post_rpc({
+                               method:"getSubTitles",
+                               params:{
+                                   // videoPath:mediaInfo.filePathMedia,
+                                   // outputPath:mediaInfo.filePathMedia.split(".")[0]+".mp3"
+                               }
+                           })
+
+
+                       }}>SubTitles</button>
+                   </View>
+                </View>
+                <View>
+                    <audio id="player" src="http://127.0.0.1:3456/assets/douyin/AI%E5%8D%96%E8%A2%9C%E7%8B%82%E8%B5%9A271%E4%B8%87.mp3" controls></audio>
+                    <button onClick={()=>{
+                        //start 
+                    }}></button>
+                    <div id="result"></div>
+
+                </View>
+            </View>
+        </View>
     )
 }
 

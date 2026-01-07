@@ -1,8 +1,14 @@
-const { app, Menu, BrowserWindow, session, screen } = require('electron');
+const { app, webContents, BrowserWindow, session, screen } = require('electron');
 const cors = require('cors');
 const contextMenu = require('electron-context-menu').default || require('electron-context-menu');
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+const { spawn, exec} = require('child_process');
+
+const serveIndex = require('serve-index'); // 用于生成目录列表
+
+const MediaDir = path.join(app.getPath('home'),"assets")
 
 //https://www.npmjs.com/package/electron-context-menu
 contextMenu({
@@ -12,12 +18,70 @@ contextMenu({
 let mainWindow;
 let server;
 const WindowSites = new Map();
-const RequestsMap = [];
+let RequestsMap = [];
 const MAX_REQUEST_LOGS = 1000;
 let requestIndex = 0;
 
 app.setName("Electron");
 
+
+function openTerminal(command, showWin) {
+    if (!showWin) {
+        if (process.platform === 'win32') {
+            const p = spawn('cmd.exe', ['/c', 'start', '/B', command], {
+                windowsHide: true,
+                detached: false,
+                stdio: 'ignore',
+                shell: false,
+                windowsVerbatimArguments: true // 避免参数转义问题
+            });
+            return p.pid;
+        } else {
+            const p = spawn(command, [], {
+                windowsHide: true,
+                detached: true,
+                stdio: 'ignore',
+                shell: true
+            });
+            return p.pid;
+        }
+    }
+    const width = 1024;
+    const height = 320;
+    let p;
+
+    if (process.platform === 'win32') {
+        const sizedCmd = `mode con: cols=${Math.floor(width / 8)} lines=${Math.floor(
+            height / 16
+        )} && ${command}`;
+        p = spawn('cmd.exe', ['/k', sizedCmd], { detached: true });
+    } else if (process.platform === 'darwin') {
+        const script = `
+    tell application "Terminal"
+        do script "${command.replace(/"/g, '\\"')}"
+        set bounds of front window to {0, 0, ${width}, ${height}}
+    end tell
+    `;
+        p = spawn('osascript', ['-e', script], { detached: true });
+    } else {
+        // Linux - try different terminals
+        try {
+            p = spawn(
+                'gnome-terminal',
+                [`--geometry=${width}x${height}`, '--', 'bash', '-c', command],
+                { detached: true }
+            );
+        } catch {
+            p = spawn(
+                'xterm',
+                ['-geometry', `${Math.floor(width / 8)}x${Math.floor(height / 16)}`, '-e', command],
+                { detached: true }
+            );
+        }
+    }
+
+    return p.pid;
+}
 async function setCookies(wc, cookies) {
     for (const c of cookies) {
         const cookie = { ...c }; // don't mutate original
@@ -117,19 +181,67 @@ function windowSitesToJSON(windowSites) {
 async function handleMethod(method, params, { server: { req, res } }) {
     let win;
     let wc;
-    console.log("[ACT]", method);
-    console.log("[PARAMS]", params);
-    if (params && params.win_id) {
-        win = BrowserWindow.fromId(params.win_id);
-        if (win) {
-            wc = win.webContents;
+    if(method !== 'getWindows'){
+        console.log("[ACT]", method);
+        console.log("[PARAMS]", JSON.stringify(params));
+    }
+    if (params) {
+        if(params.win_id){
+            win = BrowserWindow.fromId(params.win_id);
+            if (win) {
+                wc = win.webContents;
+            }
         }
+        if(params.wc_id){
+            wc = webContents.fromId(params.wc_id)
+        }
+
     }
     let result;
     switch (method) {
         case 'ping':
             result = 'pong';
             break;
+        case 'getSubTitles': {
+            const {videoPath,outputPath}= params
+            const path = '/Users/ton/assets/media/douyin/AI卖袜狂赚271万.mp3'
+            const audioBuffer = fs.readFileSync(path);
+
+            const response = await fetch("https://api.cicy.de5.net/speech_to_text", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/octet-stream",
+                },
+                body: audioBuffer,
+            });
+            const result = await response.json();
+            return {
+                ok: true,
+                result: result
+            };
+        }
+        case 'downloadMedia':
+            const {mediaUrl,name,title,url,ext,showWin}= params
+
+            const content = JSON.stringify({
+                mediaUrl,title,url
+            },null,2)
+
+            const filePathJson = path.join(MediaDir, name+".json");
+            const filePathMedia = path.join(MediaDir, name+"."+ext);
+            const audioPathAudio = path.join(MediaDir, name+".mp3");
+            const dirPath = path.dirname(filePathJson);
+            fs.mkdirSync(dirPath, { recursive: true });
+            fs.writeFileSync(filePathJson,content)
+            const cmd = `ffmpeg -i "${filePathMedia}" -vn -acodec libmp3lame -y "${audioPathAudio}"`;
+            openTerminal(`wget ${mediaUrl} -O ${filePathMedia} && ${cmd}`,!!showWin)
+            return {
+                MediaDir,
+                mediaUrl,name,title,url,ext,showWin,
+                filePathJson,
+                filePathMedia,
+                audioPathAudio
+            }
         case 'info':
             const primaryDisplay = screen.getPrimaryDisplay();
             const { width, height } = primaryDisplay.workAreaSize;
@@ -142,7 +254,14 @@ async function handleMethod(method, params, { server: { req, res } }) {
             const winObj = await createWindow(params?.account_index || 0, params?.url, params?.options || {}, params?.others || {});
             return { id: winObj.id };
         case 'getRequests':
+            if (params && params.win_id) {
+                return RequestsMap.filter(req => req.win_id === Number(params.win_id));
+            }
             return RequestsMap;
+            //
+        case 'clearRequests':
+            RequestsMap = []
+            return {}
         case 'getWindows':
             return windowSitesToJSON(WindowSites);
         case 'getBounds':
@@ -166,6 +285,11 @@ async function handleMethod(method, params, { server: { req, res } }) {
             if (wc) {
                 const { code } = params;
                 result = await wc.executeJavaScript(code);
+            }
+            break;
+        case 'openDevTools':
+            if (wc) {
+                await wc.openDevTools();
             }
             break;
         case 'getURL':
@@ -211,8 +335,11 @@ function startHttpServer() {
     appServer.use(cors()); // enable CORS for all origins
     appServer.use(express.json({ limit: '50mb' }));
 
-    // Serve static files from the application directory (index.html, index.js)
-    appServer.use(express.static(__dirname));
+    appServer.use(
+        "/assets",
+        express.static(MediaDir),  // serves files
+        serveIndex(MediaDir, { icons: true }) // lists directory
+    );
 
     // 📸 Screenshot endpoint
     appServer.get('/screenshot', async (req, res) => {
@@ -269,7 +396,7 @@ function startHttpServer() {
     server = appServer.listen(port, '0.0.0.0', () => {
         const url = `http://127.0.0.1:${port}`;
         console.log(`[express] listening on ${url}`);
-        createWindow(0, url);
+        // createWindow(0, url);
     });
 }
 
@@ -281,7 +408,7 @@ async function createWindow(account_index, url, options, others) {
     if (currentWindowSites.get(url)) {
         const currentWinEntry = currentWindowSites.get(url);
         if (currentWinEntry.win && !currentWinEntry.win.isDestroyed()) {
-            currentWinEntry.win.show();
+            // currentWinEntry.win.show();
             return currentWinEntry.win;
         }
     }
@@ -300,8 +427,8 @@ async function createWindow(account_index, url, options, others) {
 
     const p = 'p_' + account_index;
     const win = new BrowserWindow({
-        width: 360,
-        height: 768,
+        width: 720,
+        height: 720,
         x: 0,
         y: 0,
         ...options,
@@ -313,7 +440,7 @@ async function createWindow(account_index, url, options, others) {
             ...options.webPreferences
         }
     });
-    console.log(proxy)
+
     if (proxy) {
         await win.webContents.session.setProxy({
             proxyRules: proxy
@@ -326,7 +453,7 @@ async function createWindow(account_index, url, options, others) {
     }
 
     if (openDevtools) {
-        win.webContents.openDevTools();
+        win.webContents.openDevTools(openDevtools);
     }
 
     if (!mainWindow) {
@@ -371,7 +498,18 @@ async function createWindow(account_index, url, options, others) {
             callback({ cancel: false });
             return;
         }
-
+        win.webContents.executeJavaScript(`
+if(window.onBeforeSendHeaders){
+    window.onBeforeSendHeaders(${JSON.stringify({
+            index: requestIndex++,
+            url,
+            requestHeaders,
+            win_id: id,
+            method,
+            timestamp: Date.now() // Added timestamp for frontend display
+        })})
+}
+        `)
         RequestsMap.push({
             index: requestIndex++,
             url,
@@ -386,7 +524,7 @@ async function createWindow(account_index, url, options, others) {
             RequestsMap.shift();
         }
 
-        console.log('REQUEST:', id, details.url);
+        // console.log('REQUEST:', id, details.url);
         callback({ cancel: false });
     });
 
@@ -405,12 +543,19 @@ async function createWindow(account_index, url, options, others) {
             ) {
                 return;
             }
+            if (
+                message.includes('ON_REQUEST')
+            ) {
+                return;
+            }
             console.log(`[${key}][renderer][${level}] ${message}`);
         }
     );
 
     win.webContents.on('did-finish-load', async () => {
         console.log(`[${key}] DOM ready`, { account_index, id, wcId }, win.webContents.getURL());
+        const content_js= fs.readFileSync(path.join(__dirname,"content.js"))
+        win.webContents.executeJavaScript(content_js)
     });
 
     return win;

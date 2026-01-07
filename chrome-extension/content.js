@@ -121,6 +121,7 @@ const showToast = (msg, options) => {
 
 // 1. Auto Inject on Page Load
 window.addEventListener('load', () => {
+  console.log("load")
 
 });
 
