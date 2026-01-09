@@ -10546,7 +10546,7 @@ var require_ext_name = __commonJS({
 });
 
 // node_modules/electron-dl/index.js
-function registerListener(session2, options, callback = () => {
+function registerListener(session, options, callback = () => {
 }) {
   const downloadItems = /* @__PURE__ */ new Set();
   let receivedBytes = 0;
@@ -10625,7 +10625,7 @@ function registerListener(session2, options, callback = () => {
         totalBytes = 0;
       }
       if (options.unregisterWhenDone) {
-        session2.removeListener("will-download", listener);
+        session.removeListener("will-download", listener);
       }
       if (state === "cancelled") {
         if (typeof options.onCancel === "function") {
@@ -10661,7 +10661,7 @@ function registerListener(session2, options, callback = () => {
       options.onStarted(item);
     }
   };
-  session2.on("will-download", listener);
+  session.on("will-download", listener);
 }
 async function download(window_, url, options) {
   return new Promise((resolve, reject) => {
@@ -22656,7 +22656,7 @@ var require_application = __commonJS({
     var finalhandler = require_finalhandler();
     var debug = require_src()("express:application");
     var View = require_view();
-    var http = require("node:http");
+    var http2 = require("node:http");
     var methods = require_utils3().methods;
     var compileETag = require_utils3().compileETag;
     var compileQueryParser = require_utils3().compileQueryParser;
@@ -22889,7 +22889,7 @@ var require_application = __commonJS({
       tryRender(view, renderOptions, done);
     };
     app3.listen = function listen() {
-      var server2 = http.createServer(this);
+      var server2 = http2.createServer(this);
       var args2 = slice.call(arguments);
       if (typeof args2[args2.length - 1] === "function") {
         var done = args2[args2.length - 1] = once(args2[args2.length - 1]);
@@ -23664,12 +23664,12 @@ var require_request = __commonJS({
     var accepts = require_accepts();
     var isIP = require("node:net").isIP;
     var typeis = require_type_is();
-    var http = require("node:http");
+    var http2 = require("node:http");
     var fresh = require_fresh();
     var parseRange = require_range_parser();
     var parse = require_parseurl();
     var proxyaddr = require_proxy_addr();
-    var req = Object.create(http.IncomingMessage.prototype);
+    var req = Object.create(http2.IncomingMessage.prototype);
     module2.exports = req;
     req.get = req.header = function header(name) {
       if (!name) {
@@ -24644,7 +24644,7 @@ var require_response = __commonJS({
     var deprecate2 = require_depd()("express");
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
-    var http = require("node:http");
+    var http2 = require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
     var path4 = require("node:path");
@@ -24660,7 +24660,7 @@ var require_response = __commonJS({
     var resolve = path4.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = require("node:buffer");
-    var res = Object.create(http.ServerResponse.prototype);
+    var res = Object.create(http2.ServerResponse.prototype);
     module2.exports = res;
     res.status = function status(code) {
       if (!Number.isInteger(code)) {
@@ -36541,9 +36541,270 @@ var require_serve_index = __commonJS({
 // src/utils.js
 var require_utils4 = __commonJS({
   "src/utils.js"(exports2, module2) {
+    var ELECTRON_BASE_API_URL = "http://127.0.0.1:3456";
+    var AI_BASE_API_URL = "https://api.cicy.de5.net";
+    var post_rpc = async ({ method, params }) => {
+      const res = await fetch(`${ELECTRON_BASE_API_URL}/rpc`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ method, params })
+      });
+      return res.json();
+    };
+    function openWindow(url, options, others) {
+      return post_rpc({
+        method: "openWindow",
+        params: {
+          url,
+          options: {
+            width: 1024,
+            height: 768,
+            ...options,
+            webPreferences: {
+              ...options?.webPreferences
+            }
+          },
+          others
+        }
+      });
+    }
+    var loadURL = async (url, win_id) => {
+      return post_rpc({
+        method: "loadURL",
+        params: {
+          win_id: win_id || 1,
+          url
+        }
+      });
+    };
+    var sendInputEvent = async (inputEvent, win_id) => {
+      return post_rpc({
+        method: "sendInputEvent",
+        params: {
+          win_id: win_id || 1,
+          inputEvent
+        }
+      });
+    };
+    async function simulateClick(x, y, win_id) {
+      await sendInputEvent({
+        type: "mouseDown",
+        x,
+        y,
+        button: "left",
+        clickCount: 1
+      }, win_id);
+      setTimeout(() => {
+        sendInputEvent({
+          type: "mouseUp",
+          x,
+          y,
+          button: "left",
+          clickCount: 1
+        }, win_id);
+      }, 50);
+    }
+    async function sendKey(key, win_id) {
+      await sendInputEvent({ type: "keyDown", keyCode: key }, win_id);
+      setTimeout(() => {
+        sendInputEvent({ type: "keyUp", keyCode: key }, win_id);
+      }, 50);
+    }
+    var getElementRect = async (sel, win_id) => {
+      const { result } = await executeJavaScript2(`
+const ele = document.querySelector("${sel}")
+const {width,height,top,left} = ele.getBoundingClientRect()
+return {
+    width,height,top,left
+}
+    `, win_id);
+      return result;
+    };
+    var executeJavaScript2 = async (code, win_id) => {
+      return post_rpc({
+        method: "executeJavaScript",
+        params: {
+          win_id: win_id || 1,
+          code
+        }
+      });
+    };
+    var importCookies = async (cookies, win_id) => {
+      return post_rpc({
+        method: "importCookies",
+        params: {
+          win_id: win_id || 1,
+          cookies
+        }
+      });
+    };
+    var getHtmlPageInfo = async (win_id) => {
+      const code = `
+(async ()=>{
+  const {getCleanHtml,getTitle} = window._G;
+  const cleanHtml = getCleanHtml();
+      
+  return {
+    t:Date.now(),
+    title:document.title,
+    url:location.href,
+    html:cleanHtml,
+  }
+})()
+    
+    
+    `;
+      return post_rpc({
+        method: "executeJavaScript",
+        params: {
+          win_id: win_id || 1,
+          code
+        }
+      });
+    };
+    var clearRequests = async (win_id) => {
+      return post_rpc({
+        method: "clearRequests",
+        params: {
+          win_id: win_id || 1
+        }
+      });
+    };
+    var getWindowState = async (win_id) => {
+      return post_rpc({
+        method: "getWindowState",
+        params: {
+          win_id: win_id || 1
+        }
+      });
+    };
+    var getRequests = async (win_id) => {
+      return post_rpc({
+        method: "getRequests",
+        params: {
+          win_id: win_id || 1
+        }
+      });
+    };
+    var downloadMedia2 = async (params, win_id) => {
+      return post_rpc({
+        method: "downloadMedia",
+        params: {
+          win_id: win_id || 1,
+          ...params
+        }
+      });
+    };
+    var getSubTitles = async ({ mediaPath }, win_id) => {
+      return post_rpc({
+        method: "getSubTitles",
+        params: {
+          win_id: win_id || 1,
+          mediaPath
+        }
+      });
+    };
+    function waitForResult(cb, timeout = -1, interval = 100) {
+      const startTime = Date.now();
+      return new Promise((resolve) => {
+        const checkReply = async () => {
+          try {
+            const res = await Promise.resolve(cb());
+            if (res) {
+              resolve(res);
+              return;
+            }
+            if (timeout > -1 && Date.now() - startTime > timeout) {
+              resolve({ err: "ERR_TIMEOUT" });
+              return;
+            }
+            setTimeout(checkReply, interval);
+          } catch (error) {
+            console.error("Error in waitForResult callback:", error);
+            resolve({ err: `ERR:${error}` });
+          }
+        };
+        checkReply();
+      });
+    }
+    async function chatgptAsk(prompt) {
+      try {
+        const response = await fetch(`${AI_BASE_API_URL}/chatgpt/ask`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            input: prompt
+          })
+        });
+        const result = await response.json();
+        console.log("Full API response:", result);
+        const messageItem = result.output.find((item) => item.type === "message");
+        if (!messageItem) return { ok: false, error: "No message in response" };
+        console.log("Output text:", messageItem.content);
+        return messageItem.content;
+      } catch (e) {
+        console.error(e);
+        return { ok: false };
+      }
+    }
+    var __MapArray = /* @__PURE__ */ new Map();
+    var MapArray2 = class {
+      constructor(id) {
+        this.id = id;
+      }
+      all() {
+        let rows = [];
+        if (!__MapArray.has(this.id)) {
+          __MapArray.set(this.id, []);
+        } else {
+          rows = __MapArray.get(this.id);
+        }
+        return rows;
+      }
+      push(entity) {
+        let rows = this.all();
+        rows.push(entity);
+        __MapArray.set(this.id, rows);
+      }
+      clear() {
+        __MapArray.set(this.id, []);
+      }
+    };
+    module2.exports = {
+      chatgptAsk,
+      sendKey,
+      downloadMedia: downloadMedia2,
+      getWindowState,
+      getHtmlPageInfo,
+      waitForResult,
+      getRequests,
+      clearRequests,
+      executeJavaScript: executeJavaScript2,
+      post_rpc,
+      MapArray: MapArray2,
+      importCookies,
+      openWindow,
+      loadURL,
+      getElementRect,
+      sendInputEvent,
+      simulateClick,
+      getSubTitles
+    };
+  }
+});
+
+// src/helpers.js
+var require_helpers = __commonJS({
+  "src/helpers.js"(exports2, module2) {
     var { spawn } = require("child_process");
-    var { app: app3, session: session2 } = require("electron");
-    function openTerminal2(command, showWin) {
+    var { app: app3, session } = require("electron");
+    var path4 = require("path");
+    var fs3 = require("fs");
+    function openTerminal(command, showWin) {
       if (!showWin) {
         if (process.platform === "win32") {
           const p2 = spawn("cmd.exe", ["/c", "start", "/B", command], {
@@ -36646,7 +36907,7 @@ var require_utils4 = __commonJS({
       const getSystemMemoryInfo = process.getSystemMemoryInfo();
       const getSystemVersion = process.getSystemVersion();
       return {
-        session: session2.defaultSession.getStoragePath(),
+        session: session.defaultSession.getStoragePath(),
         userData: app3.getPath("userData"),
         processId: pid,
         is64Bit: arch === "x64" || arch === "arm64",
@@ -36679,33 +36940,478 @@ var require_utils4 = __commonJS({
       }
       return result;
     }
-    module2.exports = { getAppInfo: getAppInfo2, openTerminal: openTerminal2, windowSitesToJSON: windowSitesToJSON2, setCookies: setCookies2 };
+    var isVideo = (mime, filePath) => {
+      if (mime?.startsWith("video/")) return true;
+      return [
+        ".mp4",
+        ".mkv",
+        ".mov",
+        ".webm",
+        ".avi",
+        ".flv",
+        ".m4v"
+      ].includes(path4.extname(filePath).toLowerCase());
+    };
+    var extractAudio = (videoPath, audioPath) => {
+      return new Promise((resolve, reject) => {
+        const ffmpeg = spawn("ffmpeg", [
+          "-y",
+          "-i",
+          videoPath,
+          "-vn",
+          "-acodec",
+          "libmp3lame",
+          audioPath
+        ]);
+        ffmpeg.on("close", (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`ffmpeg exited with ${code}`));
+        });
+      });
+    };
+    var downloadMedia2 = (session2, options, timeout = 3e5) => {
+      const { mediaUrl, basePath: basePath2, id, MediaDir: MediaDir2 } = options;
+      return new Promise((resolve, reject) => {
+        let timeoutId;
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Download timeout after ${timeout / 1e3}s`));
+        }, timeout);
+        session2.once("will-download", async (event, item) => {
+          try {
+            const original = item.getFilename();
+            const mime = item.getMimeType();
+            const ext = path4.extname(original);
+            const newName = `${id}${ext}`;
+            const mediaPath = path4.join(MediaDir2, basePath2, id, newName);
+            if (fs3.existsSync(mediaPath)) {
+              event.preventDefault();
+              item.cancel();
+              console.log("exists", mediaPath);
+              let finalAudioPath = "";
+              if (isVideo(mime, mediaPath)) {
+                finalAudioPath = mediaPath.replace(ext, ".mp3");
+              }
+              resolve({
+                mediaUrl,
+                mediaPath,
+                audioPath: finalAudioPath,
+                mime,
+                original
+              });
+            } else {
+              fs3.mkdirSync(path4.dirname(mediaPath), { recursive: true });
+              console.log("download", mediaPath);
+              item.setSavePath(mediaPath);
+              item.resume();
+              item.on("updated", (event2, state) => {
+                console.log(`Downloading, ${item.getReceivedBytes()} / ${item.getTotalBytes()}`);
+              });
+              item.once("done", async (event2, state) => {
+                clearTimeout(timeoutId);
+                if (state !== "completed") {
+                  return reject(new Error(`Download failed: ${state}`));
+                }
+                let finalAudioPath = mediaPath;
+                if (isVideo(mime, mediaPath)) {
+                  const audioPath = mediaPath.replace(ext, ".mp3");
+                  await extractAudio(mediaPath, audioPath);
+                  finalAudioPath = audioPath;
+                }
+                resolve({
+                  mediaUrl,
+                  mediaPath,
+                  audioPath: finalAudioPath,
+                  mime,
+                  original
+                });
+              });
+            }
+          } catch (err) {
+            clearTimeout(timeoutId);
+            reject(err);
+          }
+        });
+        session2.downloadURL(mediaUrl);
+      });
+    };
+    var whisperTranscribe2 = (audioPath) => {
+      return new Promise((resolve, reject) => {
+        const curl = spawn("curl", [
+          "-s",
+          "-X",
+          "POST",
+          "https://colab-whisper.cicy.de5.net/whisper/audio/data",
+          "-H",
+          "Content-Type: multipart/form-data",
+          "-F",
+          `file=@${audioPath}`
+        ]);
+        let output = "";
+        curl.stdout.on("data", (d) => output += d.toString());
+        curl.stderr.on("data", (d) => console.error(d.toString()));
+        curl.on("close", (code) => {
+          if (code !== 0) return reject(new Error("Whisper request failed"));
+          resolve(JSON.parse(output));
+        });
+      });
+    };
+    var executeJavaScript2 = (wc, code) => {
+      let g = "";
+      const p = path4.join(__dirname, "content.js");
+      if (fs3.existsSync(p)) {
+        g = fs3.readFileSync(path4.join(__dirname, "content.js")).toString();
+      }
+      const p1 = path4.join(__dirname, "../dist/content.js");
+      if (fs3.existsSync(p1)) {
+        g += fs3.readFileSync(path4.join(__dirname, "../dist/content.js")).toString();
+      }
+      code = code.trim();
+      console.log("[EXEC JS]", code);
+      if (code.indexOf("(()") === 0) {
+        code = "return " + code;
+      }
+      if (code.indexOf("(async ") === 0) {
+        code = "return await " + code;
+      }
+      code = `(async ()=>{${g}
+${code}})()`;
+      return wc.executeJavaScript(`${code}`);
+    };
+    module2.exports = { executeJavaScript: executeJavaScript2, whisperTranscribe: whisperTranscribe2, downloadMedia: downloadMedia2, getAppInfo: getAppInfo2, openTerminal, windowSitesToJSON: windowSitesToJSON2, setCookies: setCookies2 };
+  }
+});
+
+// src/utils-node.js
+var require_utils_node = __commonJS({
+  "src/utils-node.js"(exports2, module2) {
+    var { spawn } = require("child_process");
+    var { app: app3, session } = require("electron");
+    var path4 = require("path");
+    var fs3 = require("fs");
+    var __MapArray = /* @__PURE__ */ new Map();
+    var MapArray2 = class {
+      constructor(id) {
+        this.id = id;
+      }
+      all() {
+        let rows = [];
+        if (!__MapArray.has(this.id)) {
+          __MapArray.set(this.id, []);
+        } else {
+          rows = __MapArray.get(this.id);
+        }
+        return rows;
+      }
+      push(entity) {
+        let rows = this.all();
+        rows.push(entity);
+        __MapArray.set(this.id, rows);
+      }
+      clear() {
+        __MapArray.set(this.id, []);
+      }
+    };
+    function openTerminal(command, showWin) {
+      if (!showWin) {
+        if (process.platform === "win32") {
+          const p2 = spawn("cmd.exe", ["/c", "start", "/B", command], {
+            windowsHide: true,
+            detached: false,
+            stdio: "ignore",
+            shell: false,
+            windowsVerbatimArguments: true
+            // 避免参数转义问题
+          });
+          return p2.pid;
+        } else {
+          const p2 = spawn(command, [], {
+            windowsHide: true,
+            detached: true,
+            stdio: "ignore",
+            shell: true
+          });
+          return p2.pid;
+        }
+      }
+      const width = 1024;
+      const height = 320;
+      let p;
+      if (process.platform === "win32") {
+        const sizedCmd = `mode con: cols=${Math.floor(width / 8)} lines=${Math.floor(
+          height / 16
+        )} && ${command}`;
+        p = spawn("cmd.exe", ["/k", sizedCmd], { detached: true });
+      } else if (process.platform === "darwin") {
+        const script = `
+    tell application "Terminal"
+        do script "${command.replace(/"/g, '\\"')}"
+        set bounds of front window to {0, 0, ${width}, ${height}}
+    end tell
+    `;
+        p = spawn("osascript", ["-e", script], { detached: true });
+      } else {
+        try {
+          p = spawn(
+            "gnome-terminal",
+            [`--geometry=${width}x${height}`, "--", "bash", "-c", command],
+            { detached: true }
+          );
+        } catch {
+          p = spawn(
+            "xterm",
+            ["-geometry", `${Math.floor(width / 8)}x${Math.floor(height / 16)}`, "-e", command],
+            { detached: true }
+          );
+        }
+      }
+      return p.pid;
+    }
+    async function setCookies2(wc, cookies) {
+      for (const c of cookies) {
+        const cookie = { ...c };
+        const isSecurePrefix = cookie.name.startsWith("__Secure-");
+        const isHostPrefix = cookie.name.startsWith("__Host-");
+        let url = (cookie.secure ? "https://" : "http://") + cookie.domain.replace(/^\./, "");
+        if (isSecurePrefix) {
+          cookie.secure = true;
+          if (!url.startsWith("https://")) {
+            url = "https://" + cookie.domain.replace(/^\./, "");
+          }
+        }
+        if (isHostPrefix) {
+          cookie.secure = true;
+          cookie.path = "/";
+          cookie.domain = void 0;
+          if (!url.startsWith("https://")) {
+            url = "https://" + cookie.domain?.replace(/^\./, "") || "https://localhost";
+          }
+        }
+        if (!cookie.path) cookie.path = "/";
+        try {
+          await wc.session.cookies.set({
+            url,
+            name: cookie.name,
+            value: cookie.value,
+            path: cookie.path,
+            domain: cookie.domain,
+            // may be undefined when __Host-
+            httpOnly: !!cookie.httpOnly,
+            secure: !!cookie.secure,
+            expirationDate: cookie.session ? void 0 : cookie.expirationDate,
+            sameSite: cookie.sameSite === "no_restriction" ? "no_restriction" : cookie.sameSite === "lax" ? "lax" : cookie.sameSite === "strict" ? "strict" : "unspecified"
+          });
+        } catch (e) {
+          console.error("Failed to set cookie", cookie.name, e);
+        }
+      }
+    }
+    function getAppInfo2() {
+      const { defaultApp, platform, arch, pid, env: env2, argv, execPath, versions } = process;
+      const getCPUUsage = process.getCPUUsage();
+      const getHeapStatistics = process.getHeapStatistics();
+      const getBlinkMemoryInfo = process.getBlinkMemoryInfo();
+      const getProcessMemoryInfo = process.getProcessMemoryInfo();
+      const getSystemMemoryInfo = process.getSystemMemoryInfo();
+      const getSystemVersion = process.getSystemVersion();
+      return {
+        session: session.defaultSession.getStoragePath(),
+        userData: app3.getPath("userData"),
+        processId: pid,
+        is64Bit: arch === "x64" || arch === "arm64",
+        platform,
+        versions,
+        defaultApp,
+        else: {
+          env: env2,
+          argv,
+          execPath,
+          CPUUsage: getCPUUsage,
+          HeapStatistics: getHeapStatistics,
+          BlinkMemoryInfo: getBlinkMemoryInfo,
+          ProcessMemoryInfo: getProcessMemoryInfo,
+          SystemMemoryInfo: getSystemMemoryInfo,
+          SystemVersion: getSystemVersion
+        }
+      };
+    }
+    function windowSitesToJSON2(windowSites) {
+      const result = {};
+      for (const [groupKey, siteMap] of windowSites.entries()) {
+        result[groupKey] = {};
+        for (const [url, info] of siteMap.entries()) {
+          result[groupKey][url] = {
+            id: info.id,
+            wcId: info.wcId
+          };
+        }
+      }
+      return result;
+    }
+    var isVideo = (mime, filePath) => {
+      if (mime?.startsWith("video/")) return true;
+      return [
+        ".mp4",
+        ".mkv",
+        ".mov",
+        ".webm",
+        ".avi",
+        ".flv",
+        ".m4v"
+      ].includes(path4.extname(filePath).toLowerCase());
+    };
+    var extractAudio = (videoPath, audioPath) => {
+      return new Promise((resolve, reject) => {
+        const ffmpeg = spawn("ffmpeg", [
+          "-y",
+          "-i",
+          videoPath,
+          "-vn",
+          "-acodec",
+          "libmp3lame",
+          audioPath
+        ]);
+        ffmpeg.on("close", (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`ffmpeg exited with ${code}`));
+        });
+      });
+    };
+    var downloadMedia2 = (session2, options, timeout = 3e5) => {
+      const { mediaUrl, basePath: basePath2, id, MediaDir: MediaDir2 } = options;
+      return new Promise((resolve, reject) => {
+        let timeoutId;
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Download timeout after ${timeout / 1e3}s`));
+        }, timeout);
+        session2.once("will-download", async (event, item) => {
+          try {
+            const original = item.getFilename();
+            const mime = item.getMimeType();
+            const ext = path4.extname(original);
+            const newName = `${id}${ext}`;
+            const mediaPath = path4.join(MediaDir2, basePath2, id, newName);
+            if (fs3.existsSync(mediaPath)) {
+              event.preventDefault();
+              item.cancel();
+              console.log("exists", mediaPath);
+              let finalAudioPath = "";
+              if (isVideo(mime, mediaPath)) {
+                finalAudioPath = mediaPath.replace(ext, ".mp3");
+              }
+              resolve({
+                mediaUrl,
+                mediaPath,
+                audioPath: finalAudioPath,
+                mime,
+                original
+              });
+            } else {
+              fs3.mkdirSync(path4.dirname(mediaPath), { recursive: true });
+              console.log("download", mediaPath);
+              item.setSavePath(mediaPath);
+              item.resume();
+              item.on("updated", (event2, state) => {
+                console.log(`Downloading, ${item.getReceivedBytes()} / ${item.getTotalBytes()}`);
+              });
+              item.once("done", async (event2, state) => {
+                clearTimeout(timeoutId);
+                if (state !== "completed") {
+                  return reject(new Error(`Download failed: ${state}`));
+                }
+                let finalAudioPath = mediaPath;
+                if (isVideo(mime, mediaPath)) {
+                  const audioPath = mediaPath.replace(ext, ".mp3");
+                  await extractAudio(mediaPath, audioPath);
+                  finalAudioPath = audioPath;
+                }
+                resolve({
+                  mediaUrl,
+                  mediaPath,
+                  audioPath: finalAudioPath,
+                  mime,
+                  original
+                });
+              });
+            }
+          } catch (err) {
+            clearTimeout(timeoutId);
+            reject(err);
+          }
+        });
+        session2.downloadURL(mediaUrl);
+      });
+    };
+    var whisperTranscribe2 = (audioPath) => {
+      return new Promise((resolve, reject) => {
+        const curl = spawn("curl", [
+          "-s",
+          "-X",
+          "POST",
+          "https://colab-whisper.cicy.de5.net/whisper/audio/data",
+          "-H",
+          "Content-Type: multipart/form-data",
+          "-F",
+          `file=@${audioPath}`
+        ]);
+        let output = "";
+        curl.stdout.on("data", (d) => output += d.toString());
+        curl.stderr.on("data", (d) => console.error(d.toString()));
+        curl.on("close", (code) => {
+          if (code !== 0) return reject(new Error("Whisper request failed"));
+          try {
+            resolve(JSON.parse(output));
+          } catch (e) {
+            reject(new Error("Whisper parse failed"));
+          }
+        });
+      });
+    };
+    var executeJavaScript2 = (wc, code) => {
+      let g = "";
+      const p = path4.join(__dirname, "content.js");
+      if (fs3.existsSync(p)) {
+        g = fs3.readFileSync(path4.join(__dirname, "content.js")).toString();
+      }
+      code = code.trim();
+      if (code.indexOf("(()") === 0) {
+        code = "return " + code;
+      }
+      if (code.indexOf("(async ") === 0) {
+        code = "return await " + code;
+      }
+      code = `(async ()=>{${g}
+${code}})()`;
+      console.log(code);
+      return wc.executeJavaScript(`${code}`);
+    };
+    module2.exports = { executeJavaScript: executeJavaScript2, MapArray: MapArray2, whisperTranscribe: whisperTranscribe2, downloadMedia: downloadMedia2, getAppInfo: getAppInfo2, openTerminal, windowSitesToJSON: windowSitesToJSON2, setCookies: setCookies2 };
   }
 });
 
 // src/main.js
-var { app: app2, webContents: webContents2, BrowserWindow: BrowserWindow2, session, screen } = require("electron");
+var { app: app2, webContents: webContents2, BrowserWindow: BrowserWindow2, screen } = require("electron");
 var cors = require_lib();
 var contextMenu2 = (init_electron_context_menu(), __toCommonJS(electron_context_menu_exports)).default || (init_electron_context_menu(), __toCommonJS(electron_context_menu_exports));
 var express = require_express2();
 var path3 = require("path");
 var fs2 = require("fs");
+var http = require("http");
 var serveIndex = require_serve_index();
-var { openTerminal, getAppInfo, windowSitesToJSON, setCookies } = require_utils4();
+var { MapArray } = require_utils4();
+var { executeJavaScript, downloadMedia, getAppInfo, setCookies, windowSitesToJSON } = require_helpers();
+var { whisperTranscribe } = require_utils_node();
 var MediaDir = path3.join(app2.getPath("home"), "assets");
 var mainWindow;
-var server;
 var WindowSites = /* @__PURE__ */ new Map();
-var RequestsMap = [];
-var MAX_REQUEST_LOGS = 1e3;
 var requestIndex = 0;
 var isLocal = process.env.IS_LOCAL === "true";
 console.log("IS_LOCAL", isLocal, process.env.IS_LOCAL === "true");
 app2.setName(process.env.APP_NAME || "Electron");
+var WindowState = /* @__PURE__ */ new Map();
 async function handleMethod(method, params, { server: { req, res } }) {
   let win;
   let wc;
-  if (method !== "getWindows") {
+  if (method !== "getWindows" && method !== "getWindowState") {
     console.log("[ACT]", method);
     console.log("[PARAMS]", JSON.stringify(params));
   }
@@ -36726,82 +37432,32 @@ async function handleMethod(method, params, { server: { req, res } }) {
     case "ping":
       result = "pong";
       break;
+    case "sendInputEvent": {
+      const { inputEvent } = params;
+      await wc.sendInputEvent(inputEvent);
+      break;
+    }
     case "getSubTitles": {
-      const { videoPath, outputPath } = params;
-      const path4 = "/Users/ton/assets/media/douyin/AI\u5356\u889C\u72C2\u8D5A271\u4E07.mp3";
-      const audioBuffer = fs2.readFileSync(path4);
-      const response = await fetch("https://api.cicy.de5.net/speech_to_text", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/octet-stream"
-        },
-        body: audioBuffer
-      });
-      result = await response.json();
+      const { mediaPath } = params;
+      result = await whisperTranscribe(mediaPath);
       break;
     }
-    case "downloadMedia1": {
-      const { session: session2 } = mainWindow.webContents;
-      session2.setDownloadPath(MediaDir);
-      const { mediaUrl: mediaUrl2 } = params;
-      const url2 = "https://v3-dy-o.zjcdn.com/21a9e1d82dbbb17c040a1ca41910381b/695e6db8/video/tos/cn/tos-cn-ve-15/oskPGeZnBIzGRNfvsBSALCJfgb77AzKUhBpcpt/?a=6383&ch=26&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=592&bt=592&cs=0&ds=6&ft=CZdgCYlIDyjNNRVQ9weiKYShd.6HI7103-ApQX&mime_type=video_mp4&qs=12&rc=ZzZmaDkzODhkNWczZzk4ZUBpamU8anA5cjd3NzMzNGkzM0BfNWAwNTZiXzQxNTAwMTZjYSNuMmdhMmRzbWNhLS1kLTBzcw%3D%3D&btag=80000e00030000&cc=1f&cquery=100w_100B_100H_100K_100o&dy_q=1767785032&feature_id=0ea98fd3bdc3c6c14a3d0804cc272721&l=2026010719235158364BC453BB6C01A01A&req_cdn_type=&__vid=7575015889800531200";
-      session2.on("will-download", (event, item) => {
-        const original = item.getFilename();
-        const mime = item.getMimeType();
-        const ext2 = path3.extname(original);
-        const newName = `my_new_name_${Date.now()}${ext2}`;
-        const url3 = item.getURL();
-        console.log("Download started:");
-        console.log("  Filename:", original);
-        console.log("  MIME type:", mime);
-        console.log("  URL:", url3);
-        const savePath = path3.join(MediaDir, newName);
-        item.setSavePath(savePath);
-        item.resume();
-        item.on("updated", (event2, state) => {
-          if (state === "progressing") {
-            console.log(`Downloading: ${item.getReceivedBytes()}/${item.getTotalBytes()}`);
-          }
-        });
-        item.once("done", (event2, state) => {
-          if (state === "completed") {
-            console.log(`Download finished`);
-          } else {
-            console.log(`Download failed: ${state}`);
-          }
-        });
-      });
-      await session2.downloadURL(url2);
-      break;
-    }
-    case "downloadMedia":
-      const { mediaUrl, name, title, url, ext, showWin } = params;
-      const content = JSON.stringify({
-        mediaUrl,
-        title,
-        url
-      }, null, 2);
-      const filePathJson = path3.join(MediaDir, name + ".json");
-      const filePathMedia = path3.join(MediaDir, name + "." + ext);
-      const audioPathAudio = path3.join(MediaDir, name + ".mp3");
-      const dirPath = path3.dirname(filePathJson);
-      fs2.mkdirSync(dirPath, { recursive: true });
-      fs2.writeFileSync(filePathJson, content);
-      const cmd = `ffmpeg -i "${filePathMedia}" -vn -acodec libmp3lame -y "${audioPathAudio}"`;
-      openTerminal(`wget ${mediaUrl} -O ${filePathMedia} && ${cmd}`, !!showWin);
+    case "downloadMedia": {
+      const { mediaUrl, genSubtitles, basePath: basePath2, id } = params;
+      const { session } = wc;
+      result = await downloadMedia(session, { mediaUrl, genSubtitles, basePath: basePath2, id, MediaDir });
+      console.log("genSubtitles", genSubtitles);
+      let subtitles = null;
+      if (genSubtitles) {
+        subtitles = await whisperTranscribe(result.audioPath);
+        console.log("subtitles", subtitles);
+      }
       result = {
-        MediaDir,
-        mediaUrl,
-        name,
-        title,
-        url,
-        ext,
-        showWin,
-        filePathJson,
-        filePathMedia,
-        audioPathAudio
+        ...result,
+        subtitles
       };
       break;
+    }
     case "info":
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.workAreaSize;
@@ -36814,15 +37470,26 @@ async function handleMethod(method, params, { server: { req, res } }) {
       const winObj = await createWindow(params?.account_index || 0, params?.url, params?.options || {}, params?.others || {});
       result = { id: winObj.id };
       break;
+    case "getWindowState":
+      if (params && params.win_id) {
+        result = WindowState.get(params.win_id) || {};
+      } else {
+        result = {};
+      }
+      break;
     case "getRequests":
       if (params && params.win_id) {
-        result = RequestsMap.filter((req2) => req2.win_id === Number(params.win_id));
+        result = new MapArray(params.win_id).all();
       } else {
-        result = RequestsMap;
+        result = [];
       }
       break;
     case "clearRequests":
-      RequestsMap = [];
+      if (params && params.win_id) {
+        new MapArray(params.win_id).clear();
+      } else {
+        result = [];
+      }
       break;
     case "getWindows":
       result = windowSitesToJSON(WindowSites);
@@ -36831,6 +37498,9 @@ async function handleMethod(method, params, { server: { req, res } }) {
       result = wc ? wc.getBounds() : null;
       break;
     case "loadURL":
+      if (params && params.win_id) {
+        WindowState.set(params.win_id, {});
+      }
       if (wc) wc.loadURL(params?.url);
       break;
     case "importCookies":
@@ -36848,7 +37518,7 @@ async function handleMethod(method, params, { server: { req, res } }) {
     case "executeJavaScript":
       if (wc) {
         const { code } = params;
-        result = await wc.executeJavaScript(code);
+        result = await executeJavaScript(wc, code);
       }
       break;
     case "openDevTools":
@@ -36950,18 +37620,21 @@ async function createWindow(account_index, url, options, others) {
   if (!account_index) {
     account_index = 0;
   }
+  const { userAgent, cookies, openDevtools, proxy, wrapUrl, showWin } = others || {};
   const currentWindowSites = WindowSites.has(account_index) ? WindowSites.get(account_index) : /* @__PURE__ */ new Map();
   if (currentWindowSites.get(url)) {
     const currentWinEntry = currentWindowSites.get(url);
     if (currentWinEntry.win && !currentWinEntry.win.isDestroyed()) {
+      if (showWin) {
+        currentWinEntry.win.show();
+      }
       return currentWinEntry.win;
     }
   }
   if (!options) {
     options = {};
   }
-  const { userAgent, cookies, openDevtools, proxy, wrapUrl } = others || {};
-  if (!wrapUrl) {
+  if (wrapUrl) {
     url = `${isLocal ? "http://127.0.0.1:3455" : "https://render.cicy.de5.net"}/render?u=${encodeURIComponent(url)}`;
   }
   console.log(isLocal, url);
@@ -36999,13 +37672,14 @@ async function createWindow(account_index, url, options, others) {
   if (cookies) {
     await setCookies(win.webContents, cookies);
   }
-  if (openDevtools) {
+  if (openDevtools && openDevtools.mode) {
     win.webContents.openDevTools(openDevtools);
   }
   if (!mainWindow) {
     mainWindow = win;
   }
   const id = win.id;
+  WindowState.set(id, {});
   const key = `win_${id}`;
   const ses = win.webContents.session;
   const { storagePath } = ses;
@@ -37038,20 +37712,7 @@ async function createWindow(account_index, url, options, others) {
     if (win.isDestroyed()) {
       return;
     }
-    win.webContents.executeJavaScript(`
-if(window.__onBeforeSendHeaders){
-    window.__onBeforeSendHeaders(${JSON.stringify({
-      index: requestIndex++,
-      url: url2,
-      requestHeaders,
-      win_id: id,
-      method,
-      timestamp: Date.now()
-      // Added timestamp for frontend display
-    })})
-}
-        `);
-    RequestsMap.push({
+    new MapArray(id).push({
       index: requestIndex++,
       url: url2,
       requestHeaders,
@@ -37060,9 +37721,6 @@ if(window.__onBeforeSendHeaders){
       timestamp: Date.now()
       // Added timestamp for frontend display
     });
-    if (RequestsMap.length > MAX_REQUEST_LOGS) {
-      RequestsMap.shift();
-    }
     callback({ cancel: false });
   });
   win.webContents.on(
@@ -37070,9 +37728,7 @@ if(window.__onBeforeSendHeaders){
     (event) => {
       const {
         level,
-        message: message2,
-        lineNumber,
-        sourceId
+        message: message2
       } = event;
       if (level === 2 && // Warning level
       message2.includes("Electron Security Warning")) {
@@ -37084,11 +37740,19 @@ if(window.__onBeforeSendHeaders){
       console.log(`[${key}][renderer][${level}] ${message2}`);
     }
   );
+  win.webContents.on("did-start-navigation", async ({ url: url2, isMainFrame }) => {
+    if (isMainFrame) {
+      let state = WindowState.get(id);
+      if (state) {
+        WindowState.set(id, { ready: false });
+      }
+      new MapArray(id).clear();
+    }
+  });
   win.webContents.on("did-finish-load", async () => {
     console.log(`[${key}] DOM ready`, { account_index, id, wcId }, win.webContents.getURL());
-    console.log(path3.join(__dirname, "content.js"));
-    const content_js = fs2.readFileSync(path3.join(__dirname, "content.js"));
-    win.webContents.executeJavaScript(content_js.toString());
+    WindowState.set(id, { ready: true });
+    executeJavaScript(win.webContents, `window.__win_id = ${id};window._G.init();d('dom-ready')`);
   });
   return win;
 }
@@ -37098,6 +37762,10 @@ contextMenu2({
 app2.whenReady().then(() => {
   console.log("app ready");
   startHttpServer();
+  if (process.env.INIT_URL) {
+    createWindow(0, process.env.INIT_URL, { width: 1460 }, { openDevtools: { mode: "right" } });
+    createWindow(0, "https://gemini.google.com/app", { width: 1460 }, { openDevtools: { mode: "right" } });
+  }
 });
 app2.on("before-quit", (event) => {
   console.log("before-quit");

@@ -3,13 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useRpc } from './RpcContext';
 import { NetworkLog } from './types';
 import { IconArrowLeft, IconRefresh, IconCamera, IconPlay, IconTrash } from './Icons';
+import View from './View';
 
 export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: number, initialUrl: string, onBack: () => void }) => {
     const { rpc, rpcBaseUrl } = useRpc();
     const [currentUrl, setCurrentUrl] = useState(initialUrl);
     const [navUrl, setNavUrl] = useState(initialUrl);
     const [screenshotTs, setScreenshotTs] = useState(Date.now());
-    
+
     // JS Exec State
     const [jsCode, setJsCode] = useState(`(() => { 
     return document.title;
@@ -28,10 +29,10 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
     // Consolidated Refresh Loop
     useEffect(() => {
         let interval: any;
-        
+
         const tick = async () => {
             if (isAutoRefresh) refreshScreenshot();
-            
+
             // Poll Network requests
             if (activeTab === 'network') {
                 try {
@@ -44,7 +45,7 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
                         }
                         setRequests(filtered.reverse().slice(0, 100));
                     }
-                } catch (e) { 
+                } catch (e) {
                     // Silent catch for polling
                 }
             }
@@ -52,7 +53,7 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
 
         // Initial fetch
         tick();
-        
+
         interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
     }, [isAutoRefresh, activeTab, windowId, rpc, urlFilter]);
@@ -79,7 +80,7 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
     };
 
     const getMethodColor = (method: string) => {
-        switch(method) {
+        switch (method) {
             case 'GET': return 'text-success';
             case 'POST': return 'text-warning';
             case 'DELETE': return 'text-danger';
@@ -87,6 +88,12 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
             default: return 'text-primary';
         }
     };
+
+    const removeLogin = async () => {
+        const code = `document.querySelectorAll('div[id^="login-full-panel-"]').forEach(el => el.remove());`
+        await rpc('executeJavaScript', { win_id: windowId, code });
+        setTimeout(refreshScreenshot, 500);
+    }
 
     // Construct screenshot URL
     const screenshotUrl = (rpcBaseUrl ? `${rpcBaseUrl}/screenshot` : '/screenshot') + `?id=${windowId}&t=${screenshotTs}`;
@@ -100,9 +107,9 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
                 </button>
                 <div className="flex-1 flex gap-2">
                     <input
-                        style={{width:"600px"}}
-                        className="input flex-1 font-mono text-sm" 
-                        value={navUrl} 
+                        style={{ width: "600px" }}
+                        className="input flex-1 font-mono text-sm"
+                        value={navUrl}
                         onChange={e => setNavUrl(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleNavigate()}
                     />
@@ -113,53 +120,76 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
                     <IconRefresh />
                 </button>
             </div>
+            <View relative w100p h="calc(100vh - 134px)">
+                <View red absFull right={300} center p12 borderBox>
+                    <View abs top0 xx0 pl12 pr12 bgColor='black' borderBox>
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-bold text-secondary text-sm uppercase tracking-wide">Live Preview</h3>
+                            <div className="flex gap-2 items-center">
+                                <label className="flex items-center gap-2 text-xs text-secondary cursor-pointer">
+                                    <input type="checkbox" checked={isAutoRefresh} onChange={e => setIsAutoRefresh(e.target.checked)} />
+                                    Auto-Refresh
+                                </label>
+                                <button className="btn btn-sm btn-icon" onClick={refreshScreenshot}>
+                                    <IconCamera />
+                                </button>
+                            </div>
+                        </div>
+                    </View>
+                    <View borderBox abs borderRadius={12} overflowHidden right={12} left={12} top={52} bottom={12} blue center>
+                        <img
+                            src={screenshotUrl}
+                            alt="Window Screenshot"
+                            className="preview-img"
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                height: 'auto',
+                                objectFit: 'contain'
+                            }}
+                        />
+                    </View>
+                </View>
+                <View abs yy0 right0 blue w={300}>
+                    <button onClick={removeLogin}>removeLogin</button>
+                </View>
+            </View>
+            <div className="flex flex-1 overflow-hidden" style={{ display: "none" }} >
 
-            <div className="flex flex-1 overflow-hidden" >
                 {/* Left: Visual - Fixed Width */}
                 <div className="flex-shrink-0 p-4 bg-root flex flex-col gap-4 scroll-y" style={{
 
                     borderRight: '1px solid var(--border)',
-                    width:"600px"
+                    width: "600px"
                 }}>
-                    <div className="flex justify-between items-center">
-                        <h3 className="font-bold text-secondary text-sm uppercase tracking-wide">Live Preview</h3>
-                        <div className="flex gap-2 items-center">
-                            <label className="flex items-center gap-2 text-xs text-secondary cursor-pointer">
-                                <input type="checkbox" checked={isAutoRefresh} onChange={e => setIsAutoRefresh(e.target.checked)} />
-                                Auto-Refresh
-                            </label>
-                            <button className="btn btn-sm btn-icon" onClick={refreshScreenshot}>
-                                <IconCamera />
-                            </button>
-                        </div>
-                    </div>
+
                     <div className="flex-1 flex items-center justify-center bg-black rounded border border-border overflow-hidden">
-                        <img 
-                            src={screenshotUrl} 
-                            alt="Window Screenshot" 
-                            className="preview-img" 
+                        <img
+                            src={screenshotUrl}
+                            alt="Window Screenshot"
+                            className="preview-img"
                             style={{
-                                width: '800px', 
-                                maxWidth: '100%', 
-                                maxHeight: '100%', 
+                                width: '800px',
+                                maxWidth: '100%',
+                                maxHeight: '100%',
                                 height: 'auto',
                                 objectFit: 'contain'
-                            }} 
+                            }}
                         />
                     </div>
                 </div>
 
                 {/* Right: Tools Panel - Flexible */}
-                <div style={{width:"calc(100vw - 600px)"}} className="flex-1 min-w-0 bg-card flex flex-col border-l border-border">
+                <div style={{ width: "calc(100vw - 600px)" }} className="flex-1 min-w-0 bg-card flex flex-col border-l border-border">
                     {/* Tabs */}
                     <div className="flex border-b border-border bg-bg-root" >
-                        <div 
+                        <div
                             className={`tab-btn ${activeTab === 'console' ? 'active' : ''}`}
                             onClick={() => setActiveTab('console')}
                         >
                             Console
                         </div>
-                        <div 
+                        <div
                             className={`tab-btn ${activeTab === 'network' ? 'active' : ''}`}
                             onClick={() => setActiveTab('network')}
                         >
@@ -169,17 +199,17 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
 
                     <div className="flex-1 overflow-hidden flex flex-col">
                         {activeTab === 'console' ? (
-                             <div className="p-4 flex flex-col h-full gap-4 scroll-y">
+                            <div className="p-4 flex flex-col h-full gap-4 scroll-y">
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
                                         <h3 className="font-bold text-sm">Execute JavaScript</h3>
-                                        <button className="btn btn-primary btn-sm flex items-center gap-1" style={{padding:'2px 8px', fontSize:'0.75rem'}} onClick={handleEval}>
+                                        <button className="btn btn-primary btn-sm flex items-center gap-1" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={handleEval}>
                                             <IconPlay /> Run
                                         </button>
                                     </div>
-                                    <textarea 
-                                        className="code-editor" 
-                                        value={jsCode} 
+                                    <textarea
+                                        className="code-editor"
+                                        value={jsCode}
                                         onChange={e => setJsCode(e.target.value)}
                                         spellCheck={false}
                                     />
@@ -202,22 +232,22 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
                                         <span className="font-mono text-white truncate max-w-[200px]" title={initialUrl}>{initialUrl}</span>
                                     </div>
                                 </div>
-                             </div>
+                            </div>
                         ) : (
-                             <div className="flex flex-col h-full">
+                            <div className="flex flex-col h-full">
                                 <div className="p-2 border-b border-border bg-hover flex gap-2">
-                                    <input 
-                                        className="input flex-1 py-1 text-xs" 
-                                        placeholder="Filter URLs..." 
+                                    <input
+                                        className="input flex-1 py-1 text-xs"
+                                        placeholder="Filter URLs..."
                                         value={urlFilter}
                                         onChange={e => setUrlFilter(e.target.value)}
                                     />
-                                    <button className="btn btn-sm btn-icon" onClick={async ()=>{
+                                    <button className="btn btn-sm btn-icon" onClick={async () => {
                                         try {
 
-                                            await rpc<NetworkLog[]>('clearRequests', { });
+                                            await rpc<NetworkLog[]>('clearRequests', {});
                                         } catch (e) {
-                                        }finally {
+                                        } finally {
                                             setRequests([])
                                         }
                                     }} title="Clear Log">
@@ -230,13 +260,13 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
                                     ) : (
                                         requests.map(req => (
                                             <div key={req.id} className="border-b border-border">
-                                                <div 
+                                                <div
                                                     className="p-2 hover:bg-hover cursor-pointer flex gap-2 items-center text-xs"
                                                     onClick={() => setExpandedRequestId(expandedRequestId === req.id ? null : req.id)}
                                                 >
                                                     <span className={`font-bold w-12 shrink-0 ${getMethodColor(req.method)}`}>{req.method}</span>
                                                     <span className="flex-1 truncate font-mono opacity-80" title={req.url}>{req.url}</span>
-                                                    <span className="text-secondary shrink-0" style={{fontSize: '0.65rem'}}>
+                                                    <span className="text-secondary shrink-0" style={{ fontSize: '0.65rem' }}>
                                                         {new Date(req.timestamp).toLocaleTimeString()}
                                                     </span>
                                                 </div>
@@ -261,7 +291,7 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
                                         ))
                                     )}
                                 </div>
-                             </div>
+                            </div>
                         )}
                     </div>
                 </div>

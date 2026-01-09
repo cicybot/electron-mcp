@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/main.js",
   "scripts": {
-    "start": "IS_LOCAL=true electron src/main.js",
+    "start": "IS_LOCAL=true electron --trace-warnings src/main.js",
     "prod": "electron dist/main.js",
     "dev": "nodemon",
     "build": "node build.js"
@@ -17,6 +17,7 @@
     "electron-context-menu": "^4.1.1",
     "emitter": "^0.0.5",
     "express": "^5.2.1",
+    "mysql2": "^3.16.0",
     "node-cron": "^4.2.1",
     "serve-index": "^1.9.1"
   },

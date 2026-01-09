@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Local Script Injector",
+  "name": "ElectronCicy",
   "version": "1.0.0",
-  "description": "Inject local JavaScript into any webpage with Hot Reload support.",
+  "description": "Inject local JavaScript into any webpage.",
   "permissions": [
     "cookies",
     "contextMenus",

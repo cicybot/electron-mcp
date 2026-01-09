@@ -247,18 +247,18 @@ export function handleProps(props: Omit<Omit<ViewProps, 'children'>, 'hide' | 'e
     const sx_: CSSProperties = {};
 
     if (flx) {
-        sx_.display = 'flex';
+        sx_.display = 'flex'; // Apply flexbox display
     }
     if (flex1) {
         sx_.display = 'flex';
-        sx_.flex = 1;
+        sx_.flex = 1; // Allow flex item to grow and shrink, taking up available space
     }
     if (row) {
         sx_.display = 'flex';
-        sx_.flexDirection = 'row';
+        sx_.flexDirection = 'row'; // Arrange flex items in a row
     } else if (column) {
         sx_.display = 'flex';
-        sx_.flexDirection = 'column';
+        sx_.flexDirection = 'column'; // Arrange flex items in a column
     }
     if (rowVCenter) {
         sx_.display = 'flex';

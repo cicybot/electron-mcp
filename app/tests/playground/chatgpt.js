@@ -76,8 +76,8 @@
             id,title,reply,updateTime,messages:rows
         }
     }
-
+    allItems.reverse()
     const chat =  getChats(allItems[0])
-    console.log(chat,allItems[0]); // ⬅️ browsers ignore "return" in IIFE in console, so log it instead
+    console.log(chat); // ⬅️ browsers ignore "return" in IIFE in console, so log it instead
     return chat
 })();

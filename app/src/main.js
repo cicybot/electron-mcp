@@ -1,42 +1,43 @@
-const { app, webContents, BrowserWindow, session, screen } = require('electron');
+const { app, webContents, BrowserWindow, screen } = require('electron');
 const cors = require('cors');
 const contextMenu = require('electron-context-menu').default || require('electron-context-menu');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const serveIndex = require('serve-index'); // 用于生成目录列表
-const {openTerminal,getAppInfo,windowSitesToJSON,setCookies} = require("./utils")
+const http = require('http');
 
-const MediaDir = path.join(app.getPath('home'),"assets")
+const serveIndex = require('serve-index');
+const { MapArray } = require("./utils")
+const { executeJavaScript,downloadMedia,getAppInfo,setCookies,windowSitesToJSON} = require("./helpers")
+const { whisperTranscribe } = require("./utils-node")
+
+
+const MediaDir = path.join(app.getPath('home'), "assets")
 
 let mainWindow;
-let server;
 const WindowSites = new Map();
-let RequestsMap = [];
-const MAX_REQUEST_LOGS = 1000;
 let requestIndex = 0;
 const isLocal = process.env.IS_LOCAL === "true"
-console.log("IS_LOCAL",isLocal,process.env.IS_LOCAL === 'true')
-app.setName(process.env.APP_NAME ||"Electron");
-
+console.log("IS_LOCAL", isLocal, process.env.IS_LOCAL === 'true')
+app.setName(process.env.APP_NAME || "Electron");
+const WindowState = new Map()
 async function handleMethod(method, params, { server: { req, res } }) {
     let win;
     let wc;
-    if(method !== 'getWindows'){
+    if (method !== 'getWindows' && method !== 'getWindowState') {
         console.log("[ACT]", method);
         console.log("[PARAMS]", JSON.stringify(params));
     }
     if (params) {
-        if(params.win_id){
+        if (params.win_id) {
             win = BrowserWindow.fromId(params.win_id);
             if (win) {
                 wc = win.webContents;
             }
         }
-        if(params.wc_id){
+        if (params.wc_id) {
             wc = webContents.fromId(params.wc_id)
         }
-
     }
     let result;
     let ok = true;
@@ -44,91 +45,35 @@ async function handleMethod(method, params, { server: { req, res } }) {
         case 'ping':
             result = 'pong';
             break;
+        case 'sendInputEvent': {
+            const {inputEvent} = params
+            await wc.sendInputEvent(inputEvent)
+            break;
+        }
         case 'getSubTitles': {
-            const {videoPath,outputPath}= params
-            const path = '/Users/ton/assets/media/douyin/AI卖袜狂赚271万.mp3'
-            const audioBuffer = fs.readFileSync(path);
-
-            const response = await fetch("https://api.cicy.de5.net/speech_to_text", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/octet-stream",
-                },
-                body: audioBuffer,
-            });
-            result = await response.json();
+            const { mediaPath } = params
+            result = await whisperTranscribe(mediaPath)
             break;
         }
 
-        case 'downloadMedia1':
-        {
-            const {session} = mainWindow.webContents
-            session.setDownloadPath(MediaDir)
-            const {mediaUrl}= params
-            const url = "https://v3-dy-o.zjcdn.com/21a9e1d82dbbb17c040a1ca41910381b/695e6db8/video/tos/cn/tos-cn-ve-15/oskPGeZnBIzGRNfvsBSALCJfgb77AzKUhBpcpt/?a=6383&ch=26&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=592&bt=592&cs=0&ds=6&ft=CZdgCYlIDyjNNRVQ9weiKYShd.6HI7103-ApQX&mime_type=video_mp4&qs=12&rc=ZzZmaDkzODhkNWczZzk4ZUBpamU8anA5cjd3NzMzNGkzM0BfNWAwNTZiXzQxNTAwMTZjYSNuMmdhMmRzbWNhLS1kLTBzcw%3D%3D&btag=80000e00030000&cc=1f&cquery=100w_100B_100H_100K_100o&dy_q=1767785032&feature_id=0ea98fd3bdc3c6c14a3d0804cc272721&l=2026010719235158364BC453BB6C01A01A&req_cdn_type=&__vid=7575015889800531200"
-            session.on('will-download', (event, item) => {
-                const original = item.getFilename();
-
-                const mime = item.getMimeType();
-                const ext = path.extname(original);
-
-                const newName = `my_new_name_${Date.now()}${ext}`;
-                const url = item.getURL();
-
-                console.log('Download started:');
-                console.log('  Filename:', original);
-                console.log('  MIME type:', mime);
-                console.log('  URL:', url);
-
-                // Set automatic save path
-                const savePath = path.join(MediaDir, newName);
-                item.setSavePath(savePath);
-
-                // Resume the download
-                item.resume();
-
-                // Track progress
-                item.on('updated', (event, state) => {
-                    if (state === 'progressing') {
-                        console.log(`Downloading: ${item.getReceivedBytes()}/${item.getTotalBytes()}`);
-                    }
-                });
-
-                item.once('done', (event, state) => {
-                    if (state === 'completed') {
-                        console.log(`Download finished`);
-                    } else {
-                        console.log(`Download failed: ${state}`);
-                    }
-                });
-            });
-
-            await session.downloadURL(url)
-            break
-        }
         case 'downloadMedia':
-            const {mediaUrl,name,title,url,ext,showWin}= params
-
-            const content = JSON.stringify({
-                mediaUrl,title,url
-            },null,2)
-
-            const filePathJson = path.join(MediaDir, name+".json");
-            const filePathMedia = path.join(MediaDir, name+"."+ext);
-            const audioPathAudio = path.join(MediaDir, name+".mp3");
-            const dirPath = path.dirname(filePathJson);
-            fs.mkdirSync(dirPath, { recursive: true });
-            fs.writeFileSync(filePathJson,content)
-            const cmd = `ffmpeg -i "${filePathMedia}" -vn -acodec libmp3lame -y "${audioPathAudio}"`;
-            openTerminal(`wget ${mediaUrl} -O ${filePathMedia} && ${cmd}`,!!showWin)
-            result = {
-                MediaDir,
-                mediaUrl,name,title,url,ext,showWin,
-                filePathJson,
-                filePathMedia,
-                audioPathAudio
+            {
+                const { mediaUrl,genSubtitles,basePath,id } = params
+                const { session } = wc
+                result = await downloadMedia(session, { mediaUrl,genSubtitles,basePath,id,MediaDir})
+                console.log("genSubtitles",genSubtitles)
+                let subtitles = null
+                if(genSubtitles){
+                    subtitles = await whisperTranscribe(result.audioPath)
+                    console.log("subtitles", subtitles)
+                }
+                result = {
+                    ...result,
+                    subtitles
+                }
+                break
             }
-            break
+
         case 'info':
             const primaryDisplay = screen.getPrimaryDisplay();
             const { width, height } = primaryDisplay.workAreaSize;
@@ -142,16 +87,27 @@ async function handleMethod(method, params, { server: { req, res } }) {
             const winObj = await createWindow(params?.account_index || 0, params?.url, params?.options || {}, params?.others || {});
             result = { id: winObj.id };
             break;
+        case 'getWindowState':
+            if (params && params.win_id) {
+                result = WindowState.get(params.win_id)||{}
+            } else {
+                result = {};
+            }
+            break
         case 'getRequests':
             if (params && params.win_id) {
-                result =  RequestsMap.filter(req => req.win_id === Number(params.win_id));
-            }else{
-                result =  RequestsMap;
+                result = new MapArray(params.win_id).all();
+            } else {
+                result = [];
             }
-
             break
         case 'clearRequests':
-            RequestsMap = []
+            if (params && params.win_id) {
+
+                new MapArray(params.win_id).clear();
+            } else {
+                result = [];
+            }
             break;
         case 'getWindows':
             result = windowSitesToJSON(WindowSites);
@@ -160,6 +116,9 @@ async function handleMethod(method, params, { server: { req, res } }) {
             result = wc ? wc.getBounds() : null;
             break;
         case 'loadURL':
+            if (params && params.win_id) {
+                WindowState.set(params.win_id,{})
+            }
             if (wc) wc.loadURL(params?.url);
             break;
         case 'importCookies':
@@ -177,7 +136,7 @@ async function handleMethod(method, params, { server: { req, res } }) {
         case 'executeJavaScript':
             if (wc) {
                 const { code } = params;
-                result = await wc.executeJavaScript(code);
+                result = await executeJavaScript(wc,code);
             }
             break;
         case 'openDevTools':
@@ -290,10 +249,15 @@ async function createWindow(account_index, url, options, others) {
     if (!account_index) {
         account_index = 0;
     }
+    const { userAgent, cookies, openDevtools, proxy, wrapUrl,showWin } = others || {};
+
     const currentWindowSites = WindowSites.has(account_index) ? WindowSites.get(account_index) : new Map();
     if (currentWindowSites.get(url)) {
         const currentWinEntry = currentWindowSites.get(url);
         if (currentWinEntry.win && !currentWinEntry.win.isDestroyed()) {
+            if(showWin){
+                currentWinEntry.win.show()
+            }
             return currentWinEntry.win;
         }
     }
@@ -301,11 +265,10 @@ async function createWindow(account_index, url, options, others) {
     if (!options) {
         options = {};
     }
-    const { userAgent, cookies, openDevtools, proxy,wrapUrl } = others || {};
-    if(!wrapUrl){
-        url = `${isLocal ?"http://127.0.0.1:3455":"https://render.cicy.de5.net" }/render?u=${encodeURIComponent(url)}`
+    if (wrapUrl) {
+        url = `${isLocal ? "http://127.0.0.1:3455" : "https://render.cicy.de5.net"}/render?u=${encodeURIComponent(url)}`
     }
-    console.log(isLocal,url)
+    console.log(isLocal, url)
     if (userAgent) {
         if (options.userAgent) delete options.userAgent;
     }
@@ -325,7 +288,6 @@ async function createWindow(account_index, url, options, others) {
             '--safebrowsing-disable-extension-blacklist'
         ],
         webPreferences: {
-
             partition: 'persist:' + p,
             // webviewTag: true,
             // nodeIntegration: true,
@@ -345,7 +307,7 @@ async function createWindow(account_index, url, options, others) {
         await setCookies(win.webContents, cookies);
     }
 
-    if (openDevtools) {
+    if (openDevtools && openDevtools.mode) {
         win.webContents.openDevTools(openDevtools);
     }
 
@@ -354,6 +316,7 @@ async function createWindow(account_index, url, options, others) {
     }
 
     const id = win.id;
+    WindowState.set(id,{})
     const key = `win_${id}`;
     const ses = win.webContents.session;
     const { storagePath } = ses;
@@ -391,33 +354,18 @@ async function createWindow(account_index, url, options, others) {
             callback({ cancel: false });
             return;
         }
-        if(win.isDestroyed()){
+        if (win.isDestroyed()) {
             return;
         }
-        win.webContents.executeJavaScript(`
-if(window.__onBeforeSendHeaders){
-    window.__onBeforeSendHeaders(${JSON.stringify({
-            index: requestIndex++,
-            url,
-            requestHeaders,
-            win_id: id,
-            method,
-            timestamp: Date.now() // Added timestamp for frontend display
-        })})
-}
-        `)
-        RequestsMap.push({
-            index: requestIndex++,
-            url,
-            requestHeaders,
-            win_id: id,
-            method,
-            timestamp: Date.now() // Added timestamp for frontend display
-        });
 
-        if (RequestsMap.length > MAX_REQUEST_LOGS) {
-            RequestsMap.shift();
-        }
+        new MapArray(id).push({
+            index: requestIndex++,
+            url,
+            requestHeaders,
+            win_id: id,
+            method,
+            timestamp: Date.now() // Added timestamp for frontend display
+        })
 
         // console.log('REQUEST:', id, details.url);
         callback({ cancel: false });
@@ -429,8 +377,6 @@ if(window.__onBeforeSendHeaders){
             const {
                 level,
                 message,
-                lineNumber,
-                sourceId
             } = event;
             if (
                 level === 2 && // Warning level
@@ -447,13 +393,21 @@ if(window.__onBeforeSendHeaders){
         }
     );
 
-    win.webContents.on('did-finish-load', async () => {
-        console.log(`[${key}] DOM ready`, { account_index, id, wcId }, win.webContents.getURL());
-        console.log(path.join(__dirname,"content.js"))
-        const content_js= fs.readFileSync(path.join(__dirname,"content.js"))
-        win.webContents.executeJavaScript(content_js.toString())
+    win.webContents.on('did-start-navigation', async ({ url, isMainFrame }) => {
+        if (isMainFrame) {
+            let state = WindowState.get(id)
+            if(state){
+                WindowState.set(id,{ready:false})
+            }
+            new MapArray(id).clear()
+        }
     });
 
+    win.webContents.on('did-finish-load', async () => {
+        console.log(`[${key}] DOM ready`, { account_index, id, wcId }, win.webContents.getURL());
+        WindowState.set(id,{ready:true})
+        executeJavaScript(win.webContents,`window.__win_id = ${id};window._G.init();d('dom-ready')`)
+    });
     return win;
 }
 
@@ -464,6 +418,10 @@ contextMenu({
 app.whenReady().then(() => {
     console.log('app ready');
     startHttpServer();
+    if(process.env.INIT_URL){
+        createWindow(0, process.env.INIT_URL,{width:1460},{openDevtools:{mode:"right"}})
+        createWindow(0, 'https://gemini.google.com/app',{width:1460},{openDevtools:{mode:"right"}})
+    }
 });
 app.on('before-quit', (event) => {
     console.log("before-quit")

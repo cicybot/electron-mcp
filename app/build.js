@@ -3,9 +3,6 @@ const esbuild = require('esbuild');
 const fs = require('fs');
 const path = require('path');
 
-const srcContent = path.join(__dirname, 'src', 'content.js');
-const distContent = path.join(__dirname, 'dist', 'content.js');
-
 esbuild.build({
     entryPoints: ['src/main.js'],
     bundle: true,
@@ -16,7 +13,6 @@ esbuild.build({
     sourcemap: true
 }).then(() => {
     console.log('Build finished');
-
     // Copy content.js to dist
     fs.copyFile(srcContent, distContent, (err) => {
         if (err) {
@@ -27,3 +23,25 @@ esbuild.build({
     });
 
 }).catch(() => process.exit(1));
+
+function build(src,dst){
+    return esbuild.build({
+        entryPoints: [src],
+        bundle: true,
+        platform: 'node',
+        outfile: dst,
+        external: [],
+        minify: false,
+        sourcemap: true
+    }).then(() => {
+        console.log(`Build ${src} => ${det} finished`);
+
+    }).catch(() => process.exit(1));
+
+}
+async function main(){
+    build('src/content-inject.js', 'dist/content.js')
+    build('src/extension/content.js', '../chrome-extension/content.js')
+    build('src/extension/background.js', '../chrome-extension/background.js')
+}
+main()
