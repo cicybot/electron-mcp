@@ -7,6 +7,8 @@ const { executeJavaScript, downloadMedia, getAppInfo, setCookies } = require("..
 const { whisperTranscribe } = require("../utils-node");
 const { MapArray } = require("../utils");
 const screenshotService = require('../services/screenshot-service');
+const { spawn } = require('child_process');
+const path = require('path');
 
 class RPCHandler {
   constructor() {
@@ -56,6 +58,10 @@ class RPCHandler {
           };
           break;
 
+        case 'getScreenSize':
+          result = this.appManager.getScreenInfo();
+          break;
+
         // Window management
         case 'openWindow':
           const window = await this.windowManager.createWindow(
@@ -72,6 +78,18 @@ class RPCHandler {
           if (!result) {
             ok = false;
             result = 'Window not found or already closed';
+          }
+          break;
+
+        case 'showWindow':
+          if (win) {
+            win.show();
+          }
+          break;
+
+        case 'hideWindow':
+          if (win) {
+            win.hide();
           }
           break;
 
@@ -104,7 +122,36 @@ class RPCHandler {
           break;
 
         case 'getBounds':
-          result = wc ? wc.getBounds() : null;
+          result = win ? win.getBounds() : null;
+          break;
+
+        case 'getWindowSize':
+          result = win ? win.getSize() : null;
+          break;
+
+        case 'setBounds':
+          if (win && params?.bounds) {
+            win.setBounds(params.bounds);
+          }
+          break;
+
+        case 'setWindowSize':
+          if (win && params?.width && params?.height) {
+            win.setSize(params.width, params.height);
+          }
+          break;
+
+        case 'setWindowWidth':
+          if (win && params?.width) {
+            const [, height] = win.getSize();
+            win.setSize(params.width, height);
+          }
+          break;
+
+        case 'setWindowPosition':
+          if (win && params?.x !== undefined && params?.y !== undefined) {
+            win.setPosition(params.x, params.y);
+          }
           break;
 
         // JavaScript execution
@@ -254,6 +301,109 @@ class RPCHandler {
           result = this.accountManager.getAccountWindows(params?.account_index);
           break;
 
+        // PyAutoGUI methods
+        case 'pyautoguiClick':
+          await this._runPyAutoGUIScript('click', params);
+          break;
+
+        case 'pyautoguiType':
+          await this._runPyAutoGUIScript('type', params);
+          break;
+
+        case 'pyautoguiPress':
+          await this._runPyAutoGUIScript('press', params);
+          break;
+
+        case 'pyautoguiPaste':
+          await this._runPyAutoGUIScript('paste', params);
+          break;
+
+        case 'pyautoguiMove':
+          await this._runPyAutoGUIScript('move', params);
+          break;
+
+        case 'pyautoguiPressEnter':
+          await this._runPyAutoGUIScript('press_enter', params);
+          break;
+
+        case 'pyautoguiPressBackspace':
+          await this._runPyAutoGUIScript('press_backspace', params);
+          break;
+
+        case 'pyautoguiPressSpace':
+          await this._runPyAutoGUIScript('press_space', params);
+          break;
+
+        case 'pyautoguiPressEsc':
+          await this._runPyAutoGUIScript('press_esc', params);
+          break;
+
+        case 'pyautoguiScreenshot':
+          result = await this._runPyAutoGUIScript('screenshot', params);
+          break;
+
+        case 'pyautoguiWrite':
+          // Handle Unicode text encoding for non-ASCII characters
+          if (params && params.text && /[^\x00-\x7F]/.test(params.text)) {
+            params.text = Buffer.from(params.text, 'utf8').toString('base64');
+            params.encoded = true;
+          }
+          await this._runPyAutoGUIScript('write', params);
+          break;
+
+        case 'methods':
+          result = {
+            ping: "Check if the server is responding",
+            info: "Get server information",
+            getScreenSize: "Get the screen size",
+            openWindow: "Open a new window",
+            closeWindow: "Close a window",
+            showWindow: "Show a window",
+            hideWindow: "Hide a window",
+            getWindows: "Get list of windows",
+            getWindowState: "Get window state",
+            loadURL: "Load a URL in window",
+            reload: "Reload the window",
+            getURL: "Get current URL",
+            getTitle: "Get window title",
+            getBounds: "Get window bounds",
+            getWindowSize: "Get window size",
+            setBounds: "Set window bounds",
+            setWindowSize: "Set window size",
+            setWindowWidth: "Set window width",
+            setWindowPosition: "Set window position",
+            executeJavaScript: "Execute JavaScript in window",
+            openDevTools: "Open developer tools",
+            sendInputEvent: "Send input event",
+            importCookies: "Import cookies",
+            exportCookies: "Export cookies",
+            setUserAgent: "Set user agent",
+            downloadMedia: "Download media",
+            getSubTitles: "Get subtitles",
+            getRequests: "Get requests",
+            clearRequests: "Clear requests",
+            captureScreenshot: "Capture screenshot",
+            saveScreenshot: "Save screenshot",
+            getScreenshotInfo: "Get screenshot info",
+            captureSystemScreenshot: "Capture system screenshot",
+            saveSystemScreenshot: "Save system screenshot",
+            switchAccount: "Switch account",
+            getAccountInfo: "Get account info",
+            getAccountWindows: "Get account windows",
+            pyautoguiClick: "Perform mouse click",
+            pyautoguiType: "Type text",
+            pyautoguiPress: "Press key",
+            pyautoguiPaste: "Paste content",
+            pyautoguiMove: "Move mouse to position",
+            pyautoguiPressEnter: "Press enter key",
+            pyautoguiPressBackspace: "Press backspace key",
+            pyautoguiPressSpace: "Press space key",
+            pyautoguiPressEsc: "Press escape key",
+            pyautoguiScreenshot: "Take screenshot with PyAutoGUI",
+            pyautoguiWrite: "Write text with interval"
+          };
+          break;
+
         default:
           result = "Unknown method";
           ok = false;
@@ -277,6 +427,70 @@ class RPCHandler {
 
     return { ok, result };
   }
+
+  /**
+     * Run PyAutoGUI script
+     */
+    _runPyAutoGUIScript(action, params = {}) {
+      return new Promise((resolve, reject) => {
+        let pythonArgs;
+
+        if (action === 'type') {
+          const code = `import pyautogui; pyautogui.typewrite(${JSON.stringify(params.text || '')})`;
+          pythonArgs = ['-c', code];
+        } else if (action === 'write') {
+          let text = params.text || 'Hello world!';
+          if (params.encoded) {
+            text = `base64.b64decode(${JSON.stringify(text)}).decode('utf-8')`;
+          } else {
+            text = JSON.stringify(text);
+          }
+          const interval = params.interval || 0.25;
+          const code = `import pyautogui; import base64; pyautogui.write(${text}, interval=${interval})`;
+          pythonArgs = ['-c', code];
+        } else {
+          const scriptPath = path.join(__dirname, '../py', `pyautogui_${action}.py`);
+          pythonArgs = [scriptPath, JSON.stringify(params)];
+        }
+
+        const pythonProcess = spawn('python3', pythonArgs, {
+          stdio: action === 'screenshot' ? ['pipe', 'pipe', 'pipe'] : 'inherit'
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        if (action === 'screenshot') {
+          pythonProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+          });
+          pythonProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+          });
+        }
+
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            if (action === 'screenshot') {
+              try {
+                const result = JSON.parse(stdout.trim());
+                resolve(result);
+              } catch (e) {
+                reject(new Error(`Failed to parse screenshot output: ${e.message}`));
+              }
+            } else {
+              resolve();
+            }
+          } else {
+            reject(new Error(`PyAutoGUI script failed with code ${code}: ${stderr}`));
+          }
+        });
+
+        pythonProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+    }
 }
 
 module.exports = new RPCHandler();

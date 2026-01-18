@@ -30,16 +30,23 @@ class ExpressServer {
     return this.app;
   }
 
-  /**
-   * Set up Express middleware
-   */
-  setupMiddleware() {
-    // Enable CORS for all origins
-    this.app.use(cors());
+   /**
+    * Set up Express middleware
+    */
+   setupMiddleware() {
+     // Request logging middleware
+     this.app.use((req, res, next) => {
+       const timestamp = new Date().toISOString();
+       console.log(`[${timestamp}] ${req.method} ${req.url}`);
+       next();
+     });
 
-    // Parse JSON bodies
-    this.app.use(express.json({ limit: '50mb' }));
-  }
+     // Enable CORS for all origins
+     this.app.use(cors());
+
+     // Parse JSON bodies
+     this.app.use(express.json({ limit: '50mb' }));
+   }
 
   /**
    * Set up routes
@@ -55,8 +62,13 @@ class ExpressServer {
       res.status(200).json({ message: "pong" });
     });
 
-    // Screenshot endpoint
-    this.app.get('/screenshot', this.handleScreenshot.bind(this));
+     // Screenshot endpoint
+     this.app.get('/screenshot', this.handleScreenshot.bind(this));
+
+      // PyAutoGUI screenshot endpoint
+      this.app.get('/screen', this.handlePyAutoGUIScreenshot.bind(this));
+
+
 
     // Legacy RPC endpoint
     this.app.post('/rpc', this.handleRpc.bind(this));
@@ -66,10 +78,58 @@ class ExpressServer {
      this.app.post('/messages', this.handleMcp.bind(this));
   }
 
-  /**
-   * Handle screenshot requests
-   */
-  async handleScreenshot(req, res) {
+    /**
+     * Handle PyAutoGUI screenshot requests
+     */
+    async handlePyAutoGUIScreenshot(req, res) {
+      try {
+        const result = await this.rpcHandler.handleMethod('pyautoguiScreenshot', {});
+        if (!result.ok) {
+          return res.status(500).json({ error: result.result });
+        }
+
+        const { base64 } = result.result;
+        const imgBuffer = Buffer.from(base64, 'base64');
+
+        res.set('Content-Type', 'image/png');
+        res.send(imgBuffer);
+      } catch (err) {
+        console.error('[screen]', err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+
+    /**
+     * Handle PyAutoGUI screenshot requests with path parameter
+     */
+    async handlePyAutoGUIScreenshotPath(req, res) {
+      try {
+        const filename = req.params.filename || 'screen.png';
+        const filePath = `c:\\${filename}`;
+
+        const result = await this.rpcHandler.handleMethod('pyautoguiScreenshot', {});
+        if (!result.ok) {
+          return res.status(500).json({ error: result.result });
+        }
+
+        const { base64 } = result.result;
+        const imgBuffer = Buffer.from(base64, 'base64');
+
+        // Save to file
+        const fs = require('fs').promises;
+        await fs.writeFile(filePath, imgBuffer);
+
+        res.json({ message: `Screenshot saved to ${filePath}` });
+      } catch (err) {
+        console.error('[screenpath]', err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+
+   /**
+    * Handle screenshot requests
+    */
+   async handleScreenshot(req, res) {
     try {
       const winId = req.query.id ? Number(req.query.id) : null;
       const win = winId ? require('../core/window-manager').getWindow(winId) : null;

@@ -27,7 +27,7 @@ app.whenReady().then(() => {
   expressServer.start();
   if (BrowserWindow.getAllWindows().length === 0) {
     // Could create a default window here if needed
-    winManager.createWindow(0,"http://localhost:3455/",{width:1460,height:768})
+    winManager.createWindow(0,"http://localhost:3455/",{width:300,height:200})
   }
   // Handle app activation (macOS)
   app.on('activate', () => {
