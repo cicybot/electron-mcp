@@ -67,15 +67,26 @@ describe('llm', () => {
         prompt = prompt.split("---")[0]
         console.log(prompt)
 
+        const post_rpc = async ({method, params}) => {
+            const url = `${getBaseApi()}/rpc`
+            // console.log(ELECTRON_BASE_API_URL,params)
+            const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({method, params})
+            })
+            console.log(res.status)
+            return res.json()
+        }
         await post_rpc({
-            method: "pyautoguiWrite",
+            method: "pyautoguiText",
             params: {
                 win_id:1,
                 text:prompt.trim(),
-                interval:0.01
             }
         })
-        //
         await post_rpc({
             method: "pyautoguiPress",
             params: {

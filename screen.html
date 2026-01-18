@@ -1,1 +1,60 @@
-<img src="https://ga-win-electron-3456-v1.cicy.de5.net/screen" alt="">
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Document</title>
+</head>
+<body>
+
+<style>
+    body ,div{
+        margin:0;padding:0
+    }
+</style>
+<div style="overflow: auto;width: 100vw;height:100vh">
+    <img src="https://ga-win-electron-3456-v1.cicy.de5.net/screen?t=1" alt="">
+</div>
+
+
+<script>
+
+    const post_rpc = async ({method, params}) => {
+        const url = `https://ga-win-electron-3456-v1.cicy.de5.net/rpc`
+        // console.log(ELECTRON_BASE_API_URL,params)
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({method, params})
+        })
+        console.log(res.status)
+        return res.json()
+    }
+
+    document.querySelector("img").addEventListener("click",(e)=>{
+        e.preventDefault();
+        // 获取鼠标相对于图片的坐标
+        var x = e.clientX + document.querySelector("div").scrollLeft;
+        var y = e.clientY+ document.querySelector("div").scrollTop;
+        console.log(e)
+        // 弹出显示坐标
+        alert('当前坐标: X=' + x + ', Y=' + y);
+        post_rpc({
+            method: "pyautoguiClick",
+            params: {
+                win_id:1,
+                x,y
+            }
+        })
+        location.reload()
+    })
+    //
+    // document.querySelector("img").addEventListener("click",(e)=>{
+    //     e.preventDefault();
+    //     location.reload()
+    // })
+</script>
+</body>
+</html>
