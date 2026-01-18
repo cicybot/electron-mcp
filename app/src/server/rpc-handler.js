@@ -318,6 +318,10 @@ class RPCHandler {
           await this._runPyAutoGUIScript('paste', params);
           break;
 
+        case 'pyautoguiMove':
+          await this._runPyAutoGUIScript('move', params);
+          break;
+
         case 'methods':
           result = {
             ping: "Check if the server is responding",
