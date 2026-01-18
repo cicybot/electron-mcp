@@ -433,25 +433,8 @@ class RPCHandler {
      */
     _runPyAutoGUIScript(action, params = {}) {
       return new Promise((resolve, reject) => {
-        let pythonArgs;
-
-        if (action === 'type') {
-          const code = `import pyautogui; pyautogui.typewrite(${JSON.stringify(params.text || '')})`;
-          pythonArgs = ['-c', code];
-        } else if (action === 'write') {
-          let text = params.text || 'Hello world!';
-          if (params.encoded) {
-            text = `base64.b64decode(${JSON.stringify(text)}).decode('utf-8')`;
-          } else {
-            text = JSON.stringify(text);
-          }
-          const interval = params.interval || 0.25;
-          const code = `import pyautogui; import base64; pyautogui.write(${text}, interval=${interval})`;
-          pythonArgs = ['-c', code];
-        } else {
-          const scriptPath = path.join(__dirname, '../py', `pyautogui_${action}.py`);
-          pythonArgs = [scriptPath, JSON.stringify(params)];
-        }
+        const scriptPath = path.join(__dirname, '../py', `pyautogui_${action}.py`);
+        const pythonArgs = [scriptPath, JSON.stringify(params)];
 
         const pythonProcess = spawn('python3', pythonArgs, {
           stdio: action === 'screenshot' ? ['pipe', 'pipe', 'pipe'] : 'inherit'
