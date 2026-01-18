@@ -1,6 +1,6 @@
 import pyautogui
 import sys
+import json
 
-x = int(sys.argv[1])
-y = int(sys.argv[2])
-pyautogui.moveTo(x, y)
+data = json.loads(sys.argv[1])
+pyautogui.moveTo(data['x'], data['y'])

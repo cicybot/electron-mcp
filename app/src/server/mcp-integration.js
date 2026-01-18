@@ -238,6 +238,144 @@ class McpIntegration {
         };
       }
     });
+
+    // PyAutoGUI tools
+    this.registerTool('pyautogui_click', 'Perform mouse click at coordinates using PyAutoGUI', {
+      x: z.number().optional().describe('X coordinate (optional, clicks at current position if not specified)'),
+      y: z.number().optional().describe('Y coordinate (optional, clicks at current position if not specified)')
+    }, async ({ x, y }) => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiClick', { x, y });
+        return {
+          content: [{ type: 'text', text: `PyAutoGUI clicked at (${x || 'current'}, ${y || 'current'})` }]
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
+
+    this.registerTool('pyautogui_move', 'Move mouse to coordinates using PyAutoGUI', {
+      x: z.number().describe('X coordinate'),
+      y: z.number().describe('Y coordinate')
+    }, async ({ x, y }) => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiMove', { x, y });
+        return {
+          content: [{ type: 'text', text: `PyAutoGUI moved mouse to (${x}, ${y})` }]
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
+
+    this.registerTool('pyautogui_type', 'Type text using PyAutoGUI', {
+      text: z.string().describe('Text to type')
+    }, async ({ text }) => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiType', { text });
+        return {
+          content: [{ type: 'text', text: `PyAutoGUI typed: "${text}"` }]
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
+
+    this.registerTool('pyautogui_press', 'Press a key using PyAutoGUI', {
+      key: z.string().describe('Key to press (e.g., "a", "enter", "f1")')
+    }, async ({ key }) => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiPress', { key });
+        return {
+          content: [{ type: 'text', text: `PyAutoGUI pressed key: "${key}"` }]
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
+
+    this.registerTool('pyautogui_paste', 'Paste from clipboard using PyAutoGUI', {}, async () => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiPaste', {});
+        return {
+          content: [{ type: 'text', text: 'PyAutoGUI pasted from clipboard' }]
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
+
+    this.registerTool('pyautogui_press_enter', 'Press Enter key using PyAutoGUI', {}, async () => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiPressEnter', {});
+        return {
+          content: [{ type: 'text', text: 'PyAutoGUI pressed Enter' }]
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
+
+    this.registerTool('pyautogui_press_backspace', 'Press Backspace key using PyAutoGUI', {}, async () => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiPressBackspace', {});
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
+
+    this.registerTool('pyautogui_press_space', 'Press Space key using PyAutoGUI', {}, async () => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiPressSpace', {});
+        return {
+          content: [{ type: 'text', text: 'PyAutoGUI pressed Space' }]
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
+
+    this.registerTool('pyautogui_press_esc', 'Press Escape key using PyAutoGUI', {}, async () => {
+      try {
+        await this.rpcHandler.handleMethod('pyautoguiPressEsc', {});
+        return {
+          content: [{ type: 'text', text: 'PyAutoGUI pressed Escape' }]
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
+          isError: true
+        };
+      }
+    });
   }
 
   /**
