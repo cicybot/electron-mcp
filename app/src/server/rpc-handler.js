@@ -419,28 +419,49 @@ class RPCHandler {
   }
 
   /**
-   * Run PyAutoGUI script
-   */
-  _runPyAutoGUIScript(action, params = {}) {
-    return new Promise((resolve, reject) => {
-      const scriptPath = path.join(__dirname, '../py', `pyautogui_${action}.py`);
-      const pythonProcess = spawn('python3', [scriptPath, JSON.stringify(params)], {
-        stdio: 'inherit'
-      });
+    * Run PyAutoGUI script
+    */
+   _runPyAutoGUIScript(action, params = {}) {
+     return new Promise((resolve, reject) => {
+       const scriptPath = path.join(__dirname, '../py', `pyautogui_${action}.py`);
+       const pythonProcess = spawn('python3', [scriptPath, JSON.stringify(params)], {
+         stdio: action === 'screenshot' ? ['pipe', 'pipe', 'pipe'] : 'inherit'
+       });
 
-      pythonProcess.on('close', (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`PyAutoGUI script failed with code ${code}`));
-        }
-      });
+       let stdout = '';
+       let stderr = '';
 
-      pythonProcess.on('error', (error) => {
-        reject(error);
-      });
-    });
-  }
+       if (action === 'screenshot') {
+         pythonProcess.stdout.on('data', (data) => {
+           stdout += data.toString();
+         });
+         pythonProcess.stderr.on('data', (data) => {
+           stderr += data.toString();
+         });
+       }
+
+       pythonProcess.on('close', (code) => {
+         if (code === 0) {
+           if (action === 'screenshot') {
+             try {
+               const result = JSON.parse(stdout.trim());
+               resolve(result);
+             } catch (e) {
+               reject(new Error(`Failed to parse screenshot output: ${e.message}`));
+             }
+           } else {
+             resolve();
+           }
+         } else {
+           reject(new Error(`PyAutoGUI script failed with code ${code}: ${stderr}`));
+         }
+       });
+
+       pythonProcess.on('error', (error) => {
+         reject(error);
+       });
+     });
+   }
 }
 
 module.exports = new RPCHandler();
