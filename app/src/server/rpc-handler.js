@@ -377,7 +377,10 @@ class RPCHandler {
             pyautoguiType: "Type text",
             pyautoguiPress: "Press key",
             pyautoguiPaste: "Paste content",
-            pyautoguiMove: "Move mouse to position"
+            pyautoguiMove: "Move mouse to position",
+            pyautoguiPressEnter: "Press enter key",
+            pyautoguiPressBackspace: "Press backspace key",
+            pyautoguiPressSpace: "Press space key"
           };
           break;
 
