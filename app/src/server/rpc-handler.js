@@ -334,6 +334,10 @@ class RPCHandler {
           await this._runPyAutoGUIScript('press_space', params);
           break;
 
+        case 'pyautoguiPressEsc':
+          await this._runPyAutoGUIScript('press_esc', params);
+          break;
+
         case 'methods':
           result = {
             ping: "Check if the server is responding",
