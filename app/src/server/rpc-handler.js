@@ -429,49 +429,68 @@ class RPCHandler {
   }
 
   /**
-    * Run PyAutoGUI script
-    */
-   _runPyAutoGUIScript(action, params = {}) {
-     return new Promise((resolve, reject) => {
-       const scriptPath = path.join(__dirname, '../py', `pyautogui_${action}.py`);
-       const pythonProcess = spawn('python3', [scriptPath, JSON.stringify(params)], {
-         stdio: action === 'screenshot' ? ['pipe', 'pipe', 'pipe'] : 'inherit'
-       });
+     * Run PyAutoGUI script
+     */
+    _runPyAutoGUIScript(action, params = {}) {
+      return new Promise((resolve, reject) => {
+        let pythonArgs;
 
-       let stdout = '';
-       let stderr = '';
+        if (action === 'type') {
+          const code = `import pyautogui; pyautogui.typewrite(${JSON.stringify(params.text || '')})`;
+          pythonArgs = ['-c', code];
+        } else if (action === 'write') {
+          let text = params.text || 'Hello world!';
+          if (params.encoded) {
+            text = `base64.b64decode(${JSON.stringify(text)}).decode('utf-8')`;
+          } else {
+            text = JSON.stringify(text);
+          }
+          const interval = params.interval || 0.25;
+          const code = `import pyautogui; import base64; pyautogui.write(${text}, interval=${interval})`;
+          pythonArgs = ['-c', code];
+        } else {
+          const scriptPath = path.join(__dirname, '../py', `pyautogui_${action}.py`);
+          pythonArgs = [scriptPath, JSON.stringify(params)];
+        }
 
-       if (action === 'screenshot') {
-         pythonProcess.stdout.on('data', (data) => {
-           stdout += data.toString();
-         });
-         pythonProcess.stderr.on('data', (data) => {
-           stderr += data.toString();
-         });
-       }
+        const pythonProcess = spawn('python3', pythonArgs, {
+          stdio: action === 'screenshot' ? ['pipe', 'pipe', 'pipe'] : 'inherit'
+        });
 
-       pythonProcess.on('close', (code) => {
-         if (code === 0) {
-           if (action === 'screenshot') {
-             try {
-               const result = JSON.parse(stdout.trim());
-               resolve(result);
-             } catch (e) {
-               reject(new Error(`Failed to parse screenshot output: ${e.message}`));
-             }
-           } else {
-             resolve();
-           }
-         } else {
-           reject(new Error(`PyAutoGUI script failed with code ${code}: ${stderr}`));
-         }
-       });
+        let stdout = '';
+        let stderr = '';
 
-       pythonProcess.on('error', (error) => {
-         reject(error);
-       });
-     });
-   }
+        if (action === 'screenshot') {
+          pythonProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+          });
+          pythonProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+          });
+        }
+
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            if (action === 'screenshot') {
+              try {
+                const result = JSON.parse(stdout.trim());
+                resolve(result);
+              } catch (e) {
+                reject(new Error(`Failed to parse screenshot output: ${e.message}`));
+              }
+            } else {
+              resolve();
+            }
+          } else {
+            reject(new Error(`PyAutoGUI script failed with code ${code}: ${stderr}`));
+          }
+        });
+
+        pythonProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+    }
 }
 
 module.exports = new RPCHandler();
