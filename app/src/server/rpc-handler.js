@@ -394,7 +394,8 @@ class RPCHandler {
             pyautoguiPressBackspace: "Press backspace key",
             pyautoguiPressSpace: "Press space key",
             pyautoguiPressEsc: "Press escape key",
-            pyautoguiScreenshot: "Take screenshot with PyAutoGUI"
+            pyautoguiScreenshot: "Take screenshot with PyAutoGUI",
+            pyautoguiWrite: "Write text with interval"
           };
           break;
 
