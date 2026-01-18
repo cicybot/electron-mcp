@@ -84,8 +84,6 @@ class ExpressServer {
      */
     async handlePyAutoGUIScreenshot(req, res) {
       try {
-        const filePath = 'screen.png';
-
         const result = await this.rpcHandler.handleMethod('pyautoguiScreenshot', {});
         if (!result.ok) {
           return res.status(500).json({ error: result.result });
@@ -94,11 +92,8 @@ class ExpressServer {
         const { base64 } = result.result;
         const imgBuffer = Buffer.from(base64, 'base64');
 
-        // Save to file
-        const fs = require('fs').promises;
-        await fs.writeFile(filePath, imgBuffer);
-
-        res.json({ message: `Screenshot saved to ${filePath}` });
+        res.set('Content-Type', 'image/png');
+        res.send(imgBuffer);
       } catch (err) {
         console.error('[screen]', err);
         res.status(500).json({ error: err.message });
