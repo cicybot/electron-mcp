@@ -18,7 +18,7 @@ export const Dashboard = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Create Window State
-  const [newUrl, setNewUrl] = useState('https://www.douyin.com/video/7575015889800531200');
+  const [newUrl, setNewUrl] = useState('https://www.google.com');
   const [newAccountIdx, setNewAccountIdx] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
 

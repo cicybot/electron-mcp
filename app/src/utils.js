@@ -1,27 +1,26 @@
-
-const ELECTRON_BASE_API_URL =  "http://127.0.0.1:3456"
+const ELECTRON_BASE_API_URL = "http://127.0.0.1:3456"
 const AI_BASE_API_URL = "https://api.cicy.de5.net";
 
-const post_rpc = async ({method,params})=>{
+const post_rpc = async ({method, params}) => {
     // console.log(ELECTRON_BASE_API_URL,params)
-    const res = await fetch(`${ELECTRON_BASE_API_URL}/rpc`,{
-        method:"POST",
+    const res = await fetch(`${ELECTRON_BASE_API_URL}/rpc`, {
+        method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
-        body:JSON.stringify({method,params})
+        body: JSON.stringify({method, params})
     })
     return res.json()
 }
 
-function openWindow(url,options,others){
-    return  post_rpc({
-        method:"openWindow",
-        params:{
+function openWindow(url, options, others) {
+    return post_rpc({
+        method: "openWindow",
+        params: {
             url,
-            options:{
-                width:1024,
-                height:768,
+            options: {
+                width: 1024,
+                height: 768,
                 ...options,
                 webPreferences: {
                     ...options?.webPreferences
@@ -33,22 +32,22 @@ function openWindow(url,options,others){
 
 }
 
-const loadURL =async (url,win_id)=>{
+const loadURL = async (url, win_id) => {
     return post_rpc({
-        method:"loadURL",
-        params:{
-            win_id:win_id||1,
-            url:url
+        method: "loadURL",
+        params: {
+            win_id: win_id || 1,
+            url: url
         }
     })
 }
 
 
-const sendInputEvent =async (inputEvent,win_id)=>{
+const sendInputEvent = async (inputEvent, win_id) => {
     return post_rpc({
-        method:"sendInputEvent",
-        params:{
-            win_id:win_id||1,
+        method: "sendInputEvent",
+        params: {
+            win_id: win_id || 1,
             inputEvent
         }
     })
@@ -60,7 +59,7 @@ const sendInputEvent =async (inputEvent,win_id)=>{
  * @param {number} x
  * @param {number} y
  */
-async function simulateClick( x, y,win_id) {
+async function simulateClick(x, y, win_id) {
     // 1. Press the mouse button down
     await sendInputEvent({
         type: 'mouseDown',
@@ -68,7 +67,7 @@ async function simulateClick( x, y,win_id) {
         y: y,
         button: 'left',
         clickCount: 1
-    },win_id);
+    }, win_id);
 
 
     setTimeout(() => {
@@ -79,7 +78,7 @@ async function simulateClick( x, y,win_id) {
             y: y,
             button: 'left',
             clickCount: 1
-        },win_id);
+        }, win_id);
     }, 50);
 }
 
@@ -88,52 +87,48 @@ async function simulateClick( x, y,win_id) {
  * @param {Electron.WebContents} contents
  * @param {string} key - e.g., "Enter", "Escape", "A", "F1"
  */
-async function sendKey(key,win_id) {
-    await sendInputEvent({ type: 'keyDown', keyCode: key },win_id);
+async function sendKey(key, win_id) {
+    await sendInputEvent({type: 'keyDown', keyCode: key}, win_id);
     setTimeout(() => {
-        sendInputEvent({ type: 'keyUp', keyCode: key },win_id);
+        sendInputEvent({type: 'keyUp', keyCode: key}, win_id);
     }, 50);
 
 }
 
-const getElementRect =async (sel,win_id)=>{
+const getElementRect = async (sel, win_id) => {
     const {result} = await executeJavaScript(`
 const ele = document.querySelector("${sel}")
 const {width,height,top,left} = ele.getBoundingClientRect()
 return {
     width,height,top,left
 }
-    `,win_id)
+    `, win_id)
     return result;
 }
 
 
-
-
-const executeJavaScript =async (code,win_id)=>{
+const executeJavaScript = async (code, win_id) => {
     return post_rpc({
-        method:"executeJavaScript",
-        params:{
-            win_id:win_id||1,
+        method: "executeJavaScript",
+        params: {
+            win_id: win_id || 1,
             code
         }
     })
 }
 
-const importCookies =async (cookies,win_id)=>{
+const importCookies = async (cookies, win_id) => {
     return post_rpc({
-        method:"importCookies",
-        params:{
-            win_id:win_id||1,
+        method: "importCookies",
+        params: {
+            win_id: win_id || 1,
             cookies
         }
     })
 }
 
 
-
-
-const getHtmlPageInfo =async (win_id)=>{
+const getHtmlPageInfo = async (win_id) => {
     const code = `
 (async ()=>{
   const {getCleanHtml,getTitle} = window._G;
@@ -150,56 +145,56 @@ const getHtmlPageInfo =async (win_id)=>{
     
     `
     return post_rpc({
-        method:"executeJavaScript",
-        params:{
-            win_id:win_id||1,
+        method: "executeJavaScript",
+        params: {
+            win_id: win_id || 1,
             code
         }
     })
 }
 
-const clearRequests =async (win_id)=>{
+const clearRequests = async (win_id) => {
     return post_rpc({
-        method:"clearRequests",
-        params:{
-            win_id:win_id||1,
+        method: "clearRequests",
+        params: {
+            win_id: win_id || 1,
         }
     })
 }
 
-const getWindowState =async (win_id)=>{
+const getWindowState = async (win_id) => {
     return post_rpc({
-        method:"getWindowState",
-        params:{
-            win_id:win_id||1,
+        method: "getWindowState",
+        params: {
+            win_id: win_id || 1,
         }
     })
 }
-const getRequests =async (win_id)=>{
+const getRequests = async (win_id) => {
     return post_rpc({
-        method:"getRequests",
-        params:{
-            win_id:win_id||1,
+        method: "getRequests",
+        params: {
+            win_id: win_id || 1,
         }
     })
 }
 
-const downloadMedia =async (params,win_id)=>{
+const downloadMedia = async (params, win_id) => {
     return post_rpc({
-        method:"downloadMedia",
-        params:{
-            win_id:win_id||1,
+        method: "downloadMedia",
+        params: {
+            win_id: win_id || 1,
             ...params
         }
     })
 }
 
 
-const getSubTitles =async ({mediaPath},win_id)=>{
+const getSubTitles = async ({mediaPath}, win_id) => {
     return post_rpc({
-        method:"getSubTitles",
-        params:{
-            win_id:win_id||1,
+        method: "getSubTitles",
+        params: {
+            win_id: win_id || 1,
             mediaPath
         }
     })
@@ -218,22 +213,21 @@ function waitForResult(cb, timeout = -1, interval = 100) {
                 }
                 // Check for timeout
                 if (timeout > -1 && Date.now() - startTime > timeout) {
-                    resolve({ err: 'ERR_TIMEOUT' });
+                    resolve({err: 'ERR_TIMEOUT'});
                     return;
                 }
                 // Retry after interval
                 setTimeout(checkReply, interval);
-            }
-            catch (error) {
+            } catch (error) {
                 console.error('Error in waitForResult callback:', error);
-                resolve({ err: `ERR:${error}` });
+                resolve({err: `ERR:${error}`});
             }
         };
         checkReply();
     });
 }
 
-async function chatgptAsk(prompt){
+async function chatgptAsk(prompt) {
     try {
         const response = await fetch(`${AI_BASE_API_URL}/chatgpt/ask`, {
             method: "POST",
@@ -248,14 +242,14 @@ async function chatgptAsk(prompt){
 
         console.log("Full API response:", result);
         const messageItem = result.output.find(item => item.type === "message");
-        if (!messageItem) return {ok:false, error: "No message in response"};
+        if (!messageItem) return {ok: false, error: "No message in response"};
         // const outputText = messageItem.content[0].text;
         // const res = JSON.parse(outputText)
         console.log("Output text:", messageItem.content);
         return messageItem.content
-    }catch (e) {
+    } catch (e) {
         console.error(e)
-        return {ok:false}
+        return {ok: false}
     }
 }
 
@@ -266,6 +260,7 @@ class MapArray {
     constructor(id) {
         this.id = id
     }
+
     all() {
         let rows = []
         if (!__MapArray.has(this.id)) {
@@ -275,11 +270,13 @@ class MapArray {
         }
         return rows
     }
+
     push(entity) {
         let rows = this.all()
         rows.push(entity)
         __MapArray.set(this.id, rows)
     }
+
     clear() {
         __MapArray.set(this.id, [])
     }

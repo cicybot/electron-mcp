@@ -271,6 +271,11 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ["all"]
   });
   chrome.contextMenus.create({
+    id: "toggleDiv",
+    title: "Toggle Div",
+    contexts: ["all"]
+  });
+  chrome.contextMenus.create({
     id: "copy-domain-cookies",
     title: "Copy cookies for this domain",
     contexts: ["all"]
@@ -308,6 +313,12 @@ var copyCookies = async (tab) => {
     domain
   });
 };
+var toggleDiv = async (tab) => {
+  console.log("toggleDiv", tab.url);
+  chrome.tabs.sendMessage(tab.id, {
+    type: "toggleDiv"
+  });
+};
 var copyTgAuth = async (tab) => {
   console.log("copyTgAuth", tab.url);
   chrome.tabs.sendMessage(tab.id, {
@@ -318,6 +329,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   console.log("contextMenus clicked", info);
   if (info.menuItemId === "open-in-electron") {
     openInElectron(tab);
+  }
+  if (info.menuItemId === "toggleDiv") {
+    toggleDiv(tab);
   }
   if (info.menuItemId === "copy-domain-cookies") {
     copyCookies(tab);
