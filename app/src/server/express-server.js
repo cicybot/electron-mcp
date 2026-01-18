@@ -30,16 +30,23 @@ class ExpressServer {
     return this.app;
   }
 
-  /**
-   * Set up Express middleware
-   */
-  setupMiddleware() {
-    // Enable CORS for all origins
-    this.app.use(cors());
+   /**
+    * Set up Express middleware
+    */
+   setupMiddleware() {
+     // Request logging middleware
+     this.app.use((req, res, next) => {
+       const timestamp = new Date().toISOString();
+       console.log(`[${timestamp}] ${req.method} ${req.url}`);
+       next();
+     });
 
-    // Parse JSON bodies
-    this.app.use(express.json({ limit: '50mb' }));
-  }
+     // Enable CORS for all origins
+     this.app.use(cors());
+
+     // Parse JSON bodies
+     this.app.use(express.json({ limit: '50mb' }));
+   }
 
   /**
    * Set up routes
