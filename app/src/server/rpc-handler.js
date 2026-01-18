@@ -6,6 +6,7 @@
 const { executeJavaScript, downloadMedia, getAppInfo, setCookies } = require("../helpers");
 const { whisperTranscribe } = require("../utils-node");
 const { MapArray } = require("../utils");
+const screenshotService = require('../services/screenshot-service');
 
 class RPCHandler {
   constructor() {
@@ -178,6 +179,66 @@ class RPCHandler {
           const networkMonitorClear = require('../services/network-monitor');
           networkMonitorClear.clearRequests(params?.win_id);
           result = [];
+          break;
+
+        // Screenshot operations
+        case 'captureScreenshot':
+          if (wc) {
+            const format = params?.format || 'png';
+            const buffer = await screenshotService.getScreenshotBuffer(wc, format, {
+              scaleFactor: params?.scaleFactor,
+              quality: params?.quality
+            });
+            result = {
+              format,
+              data: buffer.toString('base64'),
+              size: buffer.length
+            };
+          }
+          break;
+
+        case 'saveScreenshot':
+          if (wc) {
+            result = await screenshotService.saveScreenshot(
+              wc,
+              params?.filePath,
+              params?.format || 'png',
+              {
+                scaleFactor: params?.scaleFactor,
+                quality: params?.quality
+              }
+            );
+          }
+          break;
+
+        case 'getScreenshotInfo':
+          if (wc) {
+            result = await screenshotService.getScreenshotInfo(wc);
+          }
+          break;
+
+        case 'captureSystemScreenshot':
+          const sysFormat = params?.format || 'png';
+          const sysBuffer = await screenshotService.getSystemScreenshotBuffer(sysFormat, {
+            scaleFactor: params?.scaleFactor,
+            quality: params?.quality
+          });
+          result = {
+            format: sysFormat,
+            data: sysBuffer.toString('base64'),
+            size: sysBuffer.length
+          };
+          break;
+
+        case 'saveSystemScreenshot':
+          result = await screenshotService.saveSystemScreenshot(
+            params?.filePath,
+            params?.format || 'png',
+            {
+              scaleFactor: params?.scaleFactor,
+              quality: params?.quality
+            }
+          );
           break;
 
         // Account management

@@ -38080,6 +38080,143 @@ ${code}})()`;
   }
 });
 
+// src/services/screenshot-service.js
+var require_screenshot_service = __commonJS({
+  "src/services/screenshot-service.js"(exports2, module2) {
+    var { desktopCapturer } = require("electron");
+    var ScreenshotService = class {
+      constructor() {
+        this.appManager = require_app_manager();
+      }
+      /**
+       * Capture screenshot from webContents
+       */
+      async captureScreenshot(wc, options = {}) {
+        if (!wc) {
+          throw new Error("WebContents not available");
+        }
+        try {
+          const image = await wc.capturePage();
+          const scaleFactor = options.scaleFactor || 0.5;
+          const scaled = image.resize({
+            width: Math.floor(image.getSize().width * scaleFactor),
+            height: Math.floor(image.getSize().height * scaleFactor)
+          });
+          return scaled;
+        } catch (error) {
+          console.error("[ScreenshotService] Capture failed:", error);
+          throw new Error(`Screenshot capture failed: ${error.message}`);
+        }
+      }
+      /**
+       * Get screenshot as buffer
+       */
+      async getScreenshotBuffer(wc, format = "png", options = {}) {
+        const image = await this.captureScreenshot(wc, options);
+        switch (format.toLowerCase()) {
+          case "png":
+            return image.toPNG();
+          case "jpeg":
+          case "jpg":
+            return image.toJPEG(options.quality || 90);
+          default:
+            throw new Error(`Unsupported format: ${format}`);
+        }
+      }
+      /**
+       * Save screenshot to file
+       */
+      async saveScreenshot(wc, filePath, format = "png", options = {}) {
+        const buffer = await this.getScreenshotBuffer(wc, format, options);
+        const fs2 = require("fs").promises;
+        await fs2.writeFile(filePath, buffer);
+        return {
+          success: true,
+          filePath,
+          size: buffer.length,
+          format
+        };
+      }
+      /**
+       * Get screenshot dimensions
+       */
+      async getScreenshotInfo(wc) {
+        if (!wc) {
+          return null;
+        }
+        try {
+          const image = await wc.capturePage();
+          const size = image.getSize();
+          return {
+            width: size.width,
+            height: size.height,
+            aspectRatio: size.width / size.height
+          };
+        } catch (error) {
+          console.error("[ScreenshotService] Info retrieval failed:", error);
+          return null;
+        }
+      }
+      /**
+       * Capture system/desktop screenshot
+       */
+      async captureSystemScreenshot(options = {}) {
+        try {
+          const sources = await desktopCapturer.getSources({
+            types: ["screen", "window"],
+            thumbnailSize: options.thumbnailSize || { width: 1920, height: 1080 }
+          });
+          if (sources.length === 0) {
+            throw new Error("No screen sources found");
+          }
+          const image = sources[0].thumbnail;
+          if (options.scaleFactor) {
+            const scaled = image.resize({
+              width: Math.floor(image.getSize().width * options.scaleFactor),
+              height: Math.floor(image.getSize().height * options.scaleFactor)
+            });
+            return scaled;
+          }
+          return image;
+        } catch (error) {
+          console.error("[ScreenshotService] System capture failed:", error);
+          throw new Error(`System screenshot capture failed: ${error.message}`);
+        }
+      }
+      /**
+       * Get system screenshot as buffer
+       */
+      async getSystemScreenshotBuffer(format = "png", options = {}) {
+        const image = await this.captureSystemScreenshot(options);
+        switch (format.toLowerCase()) {
+          case "png":
+            return image.toPNG();
+          case "jpeg":
+          case "jpg":
+            return image.toJPEG(options.quality || 90);
+          default:
+            throw new Error(`Unsupported format: ${format}`);
+        }
+      }
+      /**
+       * Save system screenshot to file
+       */
+      async saveSystemScreenshot(filePath, format = "png", options = {}) {
+        const buffer = await this.getSystemScreenshotBuffer(format, options);
+        const fs2 = require("fs").promises;
+        await fs2.writeFile(filePath, buffer);
+        return {
+          success: true,
+          filePath,
+          size: buffer.length,
+          format
+        };
+      }
+    };
+    module2.exports = new ScreenshotService();
+  }
+});
+
 // src/core/account-manager.js
 var require_account_manager = __commonJS({
   "src/core/account-manager.js"(exports2, module2) {
@@ -38294,6 +38431,7 @@ var require_rpc_handler = __commonJS({
     var { executeJavaScript, downloadMedia, getAppInfo, setCookies } = require_helpers();
     var { whisperTranscribe } = require_utils_node();
     var { MapArray } = require_utils();
+    var screenshotService = require_screenshot_service();
     var RPCHandler = class {
       constructor() {
         this.appManager = require_app_manager();
@@ -38437,6 +38575,61 @@ var require_rpc_handler = __commonJS({
               const networkMonitorClear = require_network_monitor();
               networkMonitorClear.clearRequests(params?.win_id);
               result = [];
+              break;
+            // Screenshot operations
+            case "captureScreenshot":
+              if (wc) {
+                const format = params?.format || "png";
+                const buffer = await screenshotService.getScreenshotBuffer(wc, format, {
+                  scaleFactor: params?.scaleFactor,
+                  quality: params?.quality
+                });
+                result = {
+                  format,
+                  data: buffer.toString("base64"),
+                  size: buffer.length
+                };
+              }
+              break;
+            case "saveScreenshot":
+              if (wc) {
+                result = await screenshotService.saveScreenshot(
+                  wc,
+                  params?.filePath,
+                  params?.format || "png",
+                  {
+                    scaleFactor: params?.scaleFactor,
+                    quality: params?.quality
+                  }
+                );
+              }
+              break;
+            case "getScreenshotInfo":
+              if (wc) {
+                result = await screenshotService.getScreenshotInfo(wc);
+              }
+              break;
+            case "captureSystemScreenshot":
+              const sysFormat = params?.format || "png";
+              const sysBuffer = await screenshotService.getSystemScreenshotBuffer(sysFormat, {
+                scaleFactor: params?.scaleFactor,
+                quality: params?.quality
+              });
+              result = {
+                format: sysFormat,
+                data: sysBuffer.toString("base64"),
+                size: sysBuffer.length
+              };
+              break;
+            case "saveSystemScreenshot":
+              result = await screenshotService.saveSystemScreenshot(
+                params?.filePath,
+                params?.format || "png",
+                {
+                  scaleFactor: params?.scaleFactor,
+                  quality: params?.quality
+                }
+              );
               break;
             // Account management
             case "switchAccount":
@@ -74691,87 +74884,6 @@ ${JSON.stringify(requests, null, 2)}`
       }
     };
     module2.exports = new McpIntegration();
-  }
-});
-
-// src/services/screenshot-service.js
-var require_screenshot_service = __commonJS({
-  "src/services/screenshot-service.js"(exports2, module2) {
-    var ScreenshotService = class {
-      constructor() {
-        this.appManager = require_app_manager();
-      }
-      /**
-       * Capture screenshot from webContents
-       */
-      async captureScreenshot(wc, options = {}) {
-        if (!wc) {
-          throw new Error("WebContents not available");
-        }
-        try {
-          const image = await wc.capturePage();
-          const scaleFactor = options.scaleFactor || 0.5;
-          const scaled = image.resize({
-            width: Math.floor(image.getSize().width * scaleFactor),
-            height: Math.floor(image.getSize().height * scaleFactor)
-          });
-          return scaled;
-        } catch (error) {
-          console.error("[ScreenshotService] Capture failed:", error);
-          throw new Error(`Screenshot capture failed: ${error.message}`);
-        }
-      }
-      /**
-       * Get screenshot as buffer
-       */
-      async getScreenshotBuffer(wc, format = "png", options = {}) {
-        const image = await this.captureScreenshot(wc, options);
-        switch (format.toLowerCase()) {
-          case "png":
-            return image.toPNG();
-          case "jpeg":
-          case "jpg":
-            return image.toJPEG(options.quality || 90);
-          default:
-            throw new Error(`Unsupported format: ${format}`);
-        }
-      }
-      /**
-       * Save screenshot to file
-       */
-      async saveScreenshot(wc, filePath, format = "png", options = {}) {
-        const buffer = await this.getScreenshotBuffer(wc, format, options);
-        const fs2 = require("fs").promises;
-        await fs2.writeFile(filePath, buffer);
-        return {
-          success: true,
-          filePath,
-          size: buffer.length,
-          format
-        };
-      }
-      /**
-       * Get screenshot dimensions
-       */
-      async getScreenshotInfo(wc) {
-        if (!wc) {
-          return null;
-        }
-        try {
-          const image = await wc.capturePage();
-          const size = image.getSize();
-          return {
-            width: size.width,
-            height: size.height,
-            aspectRatio: size.width / size.height
-          };
-        } catch (error) {
-          console.error("[ScreenshotService] Info retrieval failed:", error);
-          return null;
-        }
-      }
-    };
-    module2.exports = new ScreenshotService();
   }
 });
 
