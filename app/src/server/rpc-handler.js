@@ -343,6 +343,11 @@ class RPCHandler {
           break;
 
         case 'pyautoguiWrite':
+          // Handle Unicode text encoding for non-ASCII characters
+          if (params && params.text && /[^\x00-\x7F]/.test(params.text)) {
+            params.text = Buffer.from(params.text, 'utf8').toString('base64');
+            params.encoded = true;
+          }
           await this._runPyAutoGUIScript('write', params);
           break;
 
