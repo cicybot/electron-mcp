@@ -113,7 +113,7 @@ class ExpressServer {
      */
     async handlePyAutoGUIScreenshotPath(req, res) {
       try {
-        const filename = req.query.filename || 'screen.png';
+        const filename = req.params.filename || 'screen.png';
         const filePath = `c:\\${filename}`;
 
         const result = await this.rpcHandler.handleMethod('pyautoguiScreenshot', {});
