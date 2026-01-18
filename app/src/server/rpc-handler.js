@@ -384,7 +384,8 @@ class RPCHandler {
             pyautoguiMove: "Move mouse to position",
             pyautoguiPressEnter: "Press enter key",
             pyautoguiPressBackspace: "Press backspace key",
-            pyautoguiPressSpace: "Press space key"
+            pyautoguiPressSpace: "Press space key",
+            pyautoguiPressEsc: "Press escape key"
           };
           break;
 
