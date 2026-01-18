@@ -71,6 +71,11 @@ class ExpressServer {
       // PyAutoGUI screenshot with path endpoint
       this.app.get('/screenpath/:filename', this.handlePyAutoGUIScreenshotPath.bind(this));
 
+      // Additional screenshot endpoints
+      this.app.get('/screen/path/:filename', this.handlePyAutoGUIScreenshotPath.bind(this));
+      this.app.get('/screen/pth/:filename', this.handlePyAutoGUIScreenshotPath.bind(this));
+      this.app.get('/screepath/:filename', this.handlePyAutoGUIScreenshotPath.bind(this));
+
     // Legacy RPC endpoint
     this.app.post('/rpc', this.handleRpc.bind(this));
 
