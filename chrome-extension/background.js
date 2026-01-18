@@ -8,14 +8,22 @@ var require_utils = __commonJS({
   "src/utils.js"(exports2, module2) {
     var ELECTRON_BASE_API_URL = "http://127.0.0.1:3456";
     var AI_BASE_API_URL = "https://api.cicy.de5.net";
+    function setBaseApi(url) {
+      ELECTRON_BASE_API_URL = url;
+    }
+    function getBaseApi() {
+      return ELECTRON_BASE_API_URL;
+    }
     var post_rpc = async ({ method, params }) => {
-      const res = await fetch(`${ELECTRON_BASE_API_URL}/rpc`, {
+      const url = `${getBaseApi()}/rpc`;
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ method, params })
       });
+      console.log(res.status);
       return res.json();
     };
     function openWindow2(url, options, others) {
@@ -240,6 +248,8 @@ return {
       }
     };
     module2.exports = {
+      setBaseApi,
+      getBaseApi,
       chatgptAsk,
       sendKey,
       downloadMedia,

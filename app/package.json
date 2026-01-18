@@ -13,22 +13,22 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "cors": "^2.8.5",
     "electron-context-menu": "^4.1.1",
     "emitter": "^0.0.5",
-    "@modelcontextprotocol/sdk": "^1.25.2",
     "express": "^4.18.0",
-    "zod": "^3.22.4",
-
     "mysql2": "^3.16.0",
     "node-cron": "^4.2.1",
-    "serve-index": "^1.9.1"
+    "serve-index": "^1.9.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@babel/cli": "^7.28.3",
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
     "esbuild": "^0.27.2",
+    "jest": "^30.2.0",
     "nodemon": "^3.1.11"
   }
 }

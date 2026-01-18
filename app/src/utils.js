@@ -1,15 +1,24 @@
-const ELECTRON_BASE_API_URL = "http://127.0.0.1:3456"
+let ELECTRON_BASE_API_URL = "http://127.0.0.1:3456"
 const AI_BASE_API_URL = "https://api.cicy.de5.net";
 
+function setBaseApi(url){
+    ELECTRON_BASE_API_URL = url
+}
+
+function getBaseApi(){
+     return ELECTRON_BASE_API_URL
+}
 const post_rpc = async ({method, params}) => {
+    const url = `${getBaseApi()}/rpc`
     // console.log(ELECTRON_BASE_API_URL,params)
-    const res = await fetch(`${ELECTRON_BASE_API_URL}/rpc`, {
+    const res = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
         body: JSON.stringify({method, params})
     })
+    console.log(res.status)
     return res.json()
 }
 
@@ -283,6 +292,7 @@ class MapArray {
 }
 
 module.exports = {
+    setBaseApi,getBaseApi,
     chatgptAsk,
     sendKey,
     downloadMedia,
