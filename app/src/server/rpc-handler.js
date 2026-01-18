@@ -347,10 +347,6 @@ case 'pyautoguiWrite':
           break;
 
         case 'pyautoguiText':
-          if (params?.text) {
-            const { clipboard } = require('electron');
-            clipboard.writeText(params.text);
-          }
           await this._runPyAutoGUIScript('text', params);
           break;
 
