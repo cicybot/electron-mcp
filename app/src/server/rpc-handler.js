@@ -342,8 +342,12 @@ class RPCHandler {
           result = await this._runPyAutoGUIScript('screenshot', params);
           break;
 
-        case 'pyautoguiWrite':
+case 'pyautoguiWrite':
           await this._runPyAutoGUIScript('write', params);
+          break;
+
+        case 'pyautoguiText':
+          await this._runPyAutoGUIScript('text', params);
           break;
 
         case 'methods':
@@ -395,7 +399,8 @@ class RPCHandler {
             pyautoguiPressSpace: "Press space key",
             pyautoguiPressEsc: "Press escape key",
             pyautoguiScreenshot: "Take screenshot with PyAutoGUI",
-            pyautoguiWrite: "Write text with interval"
+            pyautoguiWrite: "Write text with interval",
+            pyautoguiText: "Type text using PyAutoGUI"
           };
           break;
 
