@@ -76,10 +76,26 @@ class ExpressServer {
      this.app.post('/messages', this.handleMcp.bind(this));
   }
 
-  /**
-   * Handle screenshot requests
-   */
-  async handleScreenshot(req, res) {
+   /**
+    * Handle PyAutoGUI screenshot requests
+    */
+   async handlePyAutoGUIScreenshot(req, res) {
+     try {
+       const result = await this.rpcHandler.handleMethod('pyautoguiScreenshot', {});
+       const { base64 } = result.result;
+       const imgBuffer = Buffer.from(base64, 'base64');
+       res.setHeader('Content-Type', 'image/png');
+       res.send(imgBuffer);
+     } catch (err) {
+       console.error('[screen]', err);
+       res.status(500).json({ error: err.message });
+     }
+   }
+
+   /**
+    * Handle screenshot requests
+    */
+   async handleScreenshot(req, res) {
     try {
       const winId = req.query.id ? Number(req.query.id) : null;
       const win = winId ? require('../core/window-manager').getWindow(winId) : null;
