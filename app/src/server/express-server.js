@@ -82,6 +82,9 @@ class ExpressServer {
    async handlePyAutoGUIScreenshot(req, res) {
      try {
        const result = await this.rpcHandler.handleMethod('pyautoguiScreenshot', {});
+       if (!result.ok) {
+         return res.status(500).json({ error: result.result });
+       }
        const { base64 } = result.result;
        const imgBuffer = Buffer.from(base64, 'base64');
        res.setHeader('Content-Type', 'image/png');
