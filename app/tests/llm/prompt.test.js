@@ -54,9 +54,10 @@ describe('llm', () => {
     });
     it('run', async () => {
         const res = await post_rpc({
-            method: "methods",
+            method: "pyautoguiWrite",
             params: {
                 win_id:1,
+                text:"hi"
             }
         })
         console.log(res)
@@ -67,19 +68,20 @@ describe('llm', () => {
         console.log(prompt)
 
         await post_rpc({
-            method: "pyautoguiType",
+            method: "pyautoguiWrite",
             params: {
                 win_id:1,
-                text:prompt
+                text:prompt.trim(),
+                interval:0.01
             }
         })
         //
-        // await post_rpc({
-        //     method: "pyautoguiPress",
-        //     params: {
-        //         win_id:1,
-        //         key:"enter"
-        //     }
-        // })
+        await post_rpc({
+            method: "pyautoguiPress",
+            params: {
+                win_id:1,
+                key:"enter",
+            }
+        })
     });
 });
