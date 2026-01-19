@@ -11193,9 +11193,18 @@ var require_helpers = __commonJS({
       for (const [groupKey, siteMap] of windowSites.entries()) {
         result[groupKey] = {};
         for (const [url, info] of siteMap.entries()) {
+          let bounds = null;
+          if (info.win && !info.win.isDestroyed()) {
+            try {
+              bounds = info.win.getBounds();
+            } catch (error) {
+              console.error("Failed to get window bounds:", error);
+            }
+          }
           result[groupKey][url] = {
             id: info.id,
-            wcId: info.wcId
+            wcId: info.wcId,
+            bounds
           };
         }
       }
@@ -11352,19 +11361,125 @@ var require_helpers = __commonJS({
   }
 });
 
+// src/core/storage-manager.js
+var require_storage_manager = __commonJS({
+  "src/core/storage-manager.js"(exports2, module2) {
+    var fs2 = require("fs").promises;
+    var path3 = require("path");
+    var os = require("os");
+    var StorageManager = class {
+      constructor() {
+        this.storageDir = path3.join(os.homedir(), ".electron-mcp");
+        this.windowStateFile = path3.join(this.storageDir, "window-states.json");
+        this.appStateFile = path3.join(this.storageDir, "app-state.json");
+      }
+      /**
+       * Initialize storage directory and files
+       */
+      async init() {
+        try {
+          await fs2.mkdir(this.storageDir, { recursive: true });
+        } catch (error) {
+          console.error("Failed to create storage directory:", error);
+        }
+      }
+      /**
+       * Save window states to persistent storage
+       */
+      async saveWindowStates(windowStates) {
+        try {
+          await this.init();
+          const data = {
+            timestamp: Date.now(),
+            windows: windowStates
+          };
+          await fs2.writeFile(this.windowStateFile, JSON.stringify(data, null, 2));
+          console.log("Window states saved successfully");
+        } catch (error) {
+          console.error("Failed to save window states:", error);
+        }
+      }
+      /**
+       * Load window states from persistent storage
+       */
+      async loadWindowStates() {
+        try {
+          const data = await fs2.readFile(this.windowStateFile, "utf8");
+          const parsed = JSON.parse(data);
+          return parsed.windows || {};
+        } catch (error) {
+          console.log("No saved window states found or error loading:", error.message);
+          return {};
+        }
+      }
+      /**
+       * Save application state
+       */
+      async saveAppState(appState) {
+        try {
+          await this.init();
+          const data = {
+            timestamp: Date.now(),
+            ...appState
+          };
+          await fs2.writeFile(this.appStateFile, JSON.stringify(data, null, 2));
+          console.log("App state saved successfully");
+        } catch (error) {
+          console.error("Failed to save app state:", error);
+        }
+      }
+      /**
+       * Load application state
+       */
+      async loadAppState() {
+        try {
+          const data = await fs2.readFile(this.appStateFile, "utf8");
+          return JSON.parse(data);
+        } catch (error) {
+          console.log("No saved app state found or error loading:", error.message);
+          return {};
+        }
+      }
+      /**
+       * Clear all stored data
+       */
+      async clearStorage() {
+        try {
+          await fs2.unlink(this.windowStateFile);
+          await fs2.unlink(this.appStateFile);
+          console.log("Storage cleared successfully");
+        } catch (error) {
+          console.error("Failed to clear storage:", error);
+        }
+      }
+    };
+    module2.exports = new StorageManager();
+  }
+});
+
 // src/core/window-manager.js
 var require_window_manager = __commonJS({
   "src/core/window-manager.js"(exports2, module2) {
-    var { BrowserWindow: BrowserWindow3, webContents: webContents2 } = require("electron");
+    var { BrowserWindow: BrowserWindow3, webContents: webContents2, app: app3 } = require("electron");
     var { MapArray } = require_utils();
     var { setCookies, getGlobalJsCode } = require_helpers();
     var appManager2 = require_app_manager();
+    var storageManager = require_storage_manager();
     var WindowManager = class {
       constructor() {
         this.mainWindow = null;
         this.windowSites = /* @__PURE__ */ new Map();
         this.windowState = /* @__PURE__ */ new Map();
         this.requestIndex = 0;
+        this.windowStates = {};
+        this.isShuttingDown = false;
+        this.autoSaveInterval = setInterval(() => {
+          this.saveWindowStates();
+        }, 5e3);
+        app3.on("before-quit", () => {
+          this.isShuttingDown = true;
+          this.saveWindowStates();
+        });
       }
       /**
        * Create a new browser window with account isolation
@@ -11428,6 +11543,7 @@ var require_window_manager = __commonJS({
         }
         this.windowState.set(winId, {});
         this._registerWindow(accountIndex, finalUrl, win, winId, wcId);
+        this._saveWindowState(winId, win, accountIndex);
         this._setupWindowEvents(win, winId, accountIndex, finalUrl);
         win.loadURL(finalUrl);
         return win;
@@ -11445,15 +11561,25 @@ var require_window_manager = __commonJS({
        */
       _registerWindow(accountIndex, url, win, winId, wcId) {
         const accountWindows = this.windowSites.get(accountIndex) || /* @__PURE__ */ new Map();
-        accountWindows.set(url, { id: winId, wcId, win });
+        accountWindows.set(url, { id: winId, wcId, win, initialUrl: url });
         this.windowSites.set(accountIndex, accountWindows);
+        win._initialUrl = url;
       }
       /**
        * Set up window event handlers
        */
       _setupWindowEvents(win, winId, accountIndex, url) {
-        win.on("close", () => {
-          this._unregisterWindow(accountIndex, url);
+        win.on("close", (event) => {
+          this._saveWindowState(winId, win, accountIndex);
+          if (!this.isShuttingDown) {
+            this._unregisterWindow(accountIndex, url);
+          }
+        });
+        win.on("resize", () => {
+          this._saveWindowState(winId, win, accountIndex);
+        });
+        win.on("move", () => {
+          this._saveWindowState(winId, win, accountIndex);
         });
         win.webContents.on("did-start-navigation", async ({ url: navUrl, isMainFrame }) => {
           if (isMainFrame) {
@@ -11477,6 +11603,10 @@ var require_window_manager = __commonJS({
       window._G.win_id = ${winId};
       window._G._l("dom-ready")
       `);
+          this._updateWindowTitle(winId, win);
+        });
+        win.webContents.on("page-title-updated", (event, title) => {
+          this._updateWindowTitle(winId, win, title);
         });
         this._setupNetworkMonitoring(win, winId);
       }
@@ -11558,6 +11688,84 @@ var require_window_manager = __commonJS({
           return true;
         }
         return false;
+      }
+      /**
+       * Update window title with win_id prefix
+       */
+      _updateWindowTitle(winId, win, documentTitle = null) {
+        try {
+          if (win && !win.isDestroyed()) {
+            const title = documentTitle || win.webContents.getTitle();
+            win.setTitle(`#${winId} ${title}`);
+          }
+        } catch (error) {
+          console.error(`Failed to update window title for ${winId}:`, error);
+        }
+      }
+      /**
+       * Save individual window state
+       */
+      _saveWindowState(winId, win, accountIndex) {
+        try {
+          if (win && !win.isDestroyed()) {
+            const bounds = win.getBounds();
+            const initialUrl = win._initialUrl || "about:blank";
+            this.windowStates[winId] = {
+              accountIndex,
+              url: initialUrl,
+              // Always use the initial URL
+              bounds,
+              timestamp: Date.now()
+            };
+          }
+        } catch (error) {
+          console.error(`Failed to save window state for ${winId}:`, error);
+        }
+      }
+      /**
+       * Save all window states to persistent storage
+       */
+      async saveWindowStates() {
+        if (Object.keys(this.windowStates).length > 0) {
+          await storageManager.saveWindowStates(this.windowStates);
+        }
+      }
+      /**
+       * Restore windows from saved state
+       */
+      async restoreWindows() {
+        try {
+          const savedStates = await storageManager.loadWindowStates();
+          console.log("Restoring windows from saved state:", Object.keys(savedStates));
+          const sortedWinIds = Object.keys(savedStates).sort((a, b) => parseInt(a) - parseInt(b));
+          for (const winId of sortedWinIds) {
+            const state = savedStates[winId];
+            if (state && state.accountIndex !== void 0 && state.url) {
+              console.log(`Restoring window ${winId}: ${state.url}`);
+              await this.createWindow(
+                state.accountIndex,
+                state.url,
+                state.bounds || {},
+                {
+                  userAgent: null,
+                  cookies: null,
+                  openDevtools: null,
+                  proxy: null,
+                  wrapUrl: true,
+                  showWin: true
+                }
+              );
+            }
+          }
+        } catch (error) {
+          console.error("Failed to restore windows:", error);
+        }
+      }
+      /**
+       * Initialize window manager and restore previous session
+       */
+      async init() {
+        await this.restoreWindows();
       }
     };
     module2.exports = new WindowManager();
@@ -38442,6 +38650,8 @@ var require_rpc_handler = __commonJS({
     var { whisperTranscribe } = require_utils_node();
     var { MapArray } = require_utils();
     var screenshotService = require_screenshot_service();
+    var { spawn } = require("child_process");
+    var path3 = require("path");
     var RPCHandler = class {
       constructor() {
         this.appManager = require_app_manager();
@@ -38481,6 +38691,9 @@ var require_rpc_handler = __commonJS({
                 screen: this.appManager.getScreenInfo()
               };
               break;
+            case "getScreenSize":
+              result = this.appManager.getScreenInfo();
+              break;
             // Window management
             case "openWindow":
               const window2 = await this.windowManager.createWindow(
@@ -38496,6 +38709,16 @@ var require_rpc_handler = __commonJS({
               if (!result) {
                 ok = false;
                 result = "Window not found or already closed";
+              }
+              break;
+            case "showWindow":
+              if (win) {
+                win.show();
+              }
+              break;
+            case "hideWindow":
+              if (win) {
+                win.hide();
               }
               break;
             case "getWindows":
@@ -38521,7 +38744,31 @@ var require_rpc_handler = __commonJS({
               result = wc ? wc.getTitle() : "";
               break;
             case "getBounds":
-              result = wc ? wc.getBounds() : null;
+              result = win ? win.getBounds() : null;
+              break;
+            case "getWindowSize":
+              result = win ? win.getSize() : null;
+              break;
+            case "setBounds":
+              if (win && params?.bounds) {
+                win.setBounds(params.bounds);
+              }
+              break;
+            case "setWindowSize":
+              if (win && params?.width && params?.height) {
+                win.setSize(params.width, params.height);
+              }
+              break;
+            case "setWindowWidth":
+              if (win && params?.width) {
+                const [, height] = win.getSize();
+                win.setSize(params.width, height);
+              }
+              break;
+            case "setWindowPosition":
+              if (win && params?.x !== void 0 && params?.y !== void 0) {
+                win.setPosition(params.x, params.y);
+              }
               break;
             // JavaScript execution
             case "executeJavaScript":
@@ -38538,6 +38785,78 @@ var require_rpc_handler = __commonJS({
             case "sendInputEvent":
               if (wc) {
                 await wc.sendInputEvent(params?.inputEvent);
+              }
+              break;
+            case "sendElectronClick":
+              if (wc && params?.x !== void 0 && params?.y !== void 0) {
+                await wc.sendInputEvent({
+                  type: "mouseDown",
+                  x: params.x,
+                  y: params.y,
+                  button: params.button || "left",
+                  clickCount: params.clickCount || 1
+                });
+                setTimeout(async () => {
+                  await wc.sendInputEvent({
+                    type: "mouseUp",
+                    x: params.x,
+                    y: params.y,
+                    button: params.button || "left",
+                    clickCount: params.clickCount || 1
+                  });
+                }, 300);
+              }
+              break;
+            case "sendElectronPressEnter":
+              if (wc) {
+                await wc.sendInputEvent({
+                  type: "keyDown",
+                  keyCode: "Return"
+                });
+                await wc.sendInputEvent({
+                  type: "keyUp",
+                  keyCode: "Return"
+                });
+              }
+              break;
+            case "writeClipboard":
+              if (params?.text) {
+                const { clipboard } = require("electron");
+                try {
+                  clipboard.writeText(params.text);
+                } catch (error) {
+                  console.error("Failed to write to clipboard:", error);
+                  throw new Error(`Clipboard write failed: ${error.message}`);
+                }
+              }
+              break;
+            case "showFloatDiv":
+              if (wc) {
+                const options = params || {};
+                await wc.executeJavaScript(`window._G.showFloatDiv(${JSON.stringify(options)})`);
+              }
+              break;
+            case "hideFloatDiv":
+              if (wc) {
+                await wc.executeJavaScript("window._G.hideFloatDiv()");
+              }
+              break;
+            case "sendElectronCtlV":
+              if (wc) {
+                await wc.sendInputEvent({
+                  type: "keyDown",
+                  keyCode: "V",
+                  modifiers: ["control"]
+                });
+                await wc.sendInputEvent({
+                  type: "keyUp",
+                  keyCode: "V",
+                  modifiers: ["control"]
+                });
+                await wc.sendInputEvent({
+                  type: "keyUp",
+                  keyCode: "Control"
+                });
               }
               break;
             // Cookies
@@ -38651,6 +38970,96 @@ var require_rpc_handler = __commonJS({
             case "getAccountWindows":
               result = this.accountManager.getAccountWindows(params?.account_index);
               break;
+            // PyAutoGUI methods
+            case "pyautoguiClick":
+              await this._runPyAutoGUIScript("click", params);
+              break;
+            case "pyautoguiType":
+              await this._runPyAutoGUIScript("type", params);
+              break;
+            case "pyautoguiPress":
+              await this._runPyAutoGUIScript("press", params);
+              break;
+            case "pyautoguiPaste":
+              await this._runPyAutoGUIScript("paste", params);
+              break;
+            case "pyautoguiMove":
+              await this._runPyAutoGUIScript("move", params);
+              break;
+            case "pyautoguiPressEnter":
+              await this._runPyAutoGUIScript("press_enter", params);
+              break;
+            case "pyautoguiPressBackspace":
+              await this._runPyAutoGUIScript("press_backspace", params);
+              break;
+            case "pyautoguiPressSpace":
+              await this._runPyAutoGUIScript("press_space", params);
+              break;
+            case "pyautoguiPressEsc":
+              await this._runPyAutoGUIScript("press_esc", params);
+              break;
+            case "pyautoguiScreenshot":
+              result = await this._runPyAutoGUIScript("screenshot", params);
+              break;
+            case "pyautoguiWrite":
+              await this._runPyAutoGUIScript("write", params);
+              break;
+            case "pyautoguiText":
+              await this._runPyAutoGUIScript("text", params);
+              break;
+            case "methods":
+              result = {
+                ping: "Check if the server is responding",
+                info: "Get server information",
+                getScreenSize: "Get the screen size",
+                openWindow: "Open a new window",
+                closeWindow: "Close a window",
+                showWindow: "Show a window",
+                hideWindow: "Hide a window",
+                getWindows: "Get list of windows",
+                getWindowState: "Get window state",
+                loadURL: "Load a URL in window",
+                reload: "Reload the window",
+                getURL: "Get current URL",
+                getTitle: "Get window title",
+                getBounds: "Get window bounds",
+                getWindowSize: "Get window size",
+                setBounds: "Set window bounds",
+                setWindowSize: "Set window size",
+                setWindowWidth: "Set window width",
+                setWindowPosition: "Set window position",
+                executeJavaScript: "Execute JavaScript in window",
+                openDevTools: "Open developer tools",
+                sendInputEvent: "Send input event",
+                importCookies: "Import cookies",
+                exportCookies: "Export cookies",
+                setUserAgent: "Set user agent",
+                downloadMedia: "Download media",
+                getSubTitles: "Get subtitles",
+                getRequests: "Get requests",
+                clearRequests: "Clear requests",
+                captureScreenshot: "Capture screenshot",
+                saveScreenshot: "Save screenshot",
+                getScreenshotInfo: "Get screenshot info",
+                captureSystemScreenshot: "Capture system screenshot",
+                saveSystemScreenshot: "Save system screenshot",
+                switchAccount: "Switch account",
+                getAccountInfo: "Get account info",
+                getAccountWindows: "Get account windows",
+                pyautoguiClick: "Perform mouse click",
+                pyautoguiType: "Type text",
+                pyautoguiPress: "Press key",
+                pyautoguiPaste: "Paste content",
+                pyautoguiMove: "Move mouse to position",
+                pyautoguiPressEnter: "Press enter key",
+                pyautoguiPressBackspace: "Press backspace key",
+                pyautoguiPressSpace: "Press space key",
+                pyautoguiPressEsc: "Press escape key",
+                pyautoguiScreenshot: "Take screenshot with PyAutoGUI",
+                pyautoguiWrite: "Write text with interval",
+                pyautoguiText: "Type text using PyAutoGUI"
+              };
+              break;
             default:
               result = "Unknown method";
               ok = false;
@@ -38669,8 +39078,310 @@ var require_rpc_handler = __commonJS({
         }
         return { ok, result };
       }
+      /**
+         * Run PyAutoGUI script
+         */
+      _runPyAutoGUIScript(action, params = {}) {
+        return new Promise((resolve, reject) => {
+          const scriptPath = path3.join(__dirname, "../py", `pyautogui_${action}.py`);
+          const pythonArgs = [scriptPath, JSON.stringify(params)];
+          const pythonProcess = spawn("python3", pythonArgs, {
+            stdio: action === "screenshot" ? ["pipe", "pipe", "pipe"] : "inherit"
+          });
+          let stdout = "";
+          let stderr = "";
+          if (action === "screenshot") {
+            pythonProcess.stdout.on("data", (data) => {
+              stdout += data.toString();
+            });
+            pythonProcess.stderr.on("data", (data) => {
+              stderr += data.toString();
+            });
+          }
+          pythonProcess.on("close", (code) => {
+            if (code === 0) {
+              if (action === "screenshot") {
+                try {
+                  const result = JSON.parse(stdout.trim());
+                  resolve(result);
+                } catch (e) {
+                  reject(new Error(`Failed to parse screenshot output: ${e.message}`));
+                }
+              } else {
+                resolve();
+              }
+            } else {
+              reject(new Error(`PyAutoGUI script failed with code ${code}: ${stderr}`));
+            }
+          });
+          pythonProcess.on("error", (error) => {
+            reject(error);
+          });
+        });
+      }
     };
     module2.exports = new RPCHandler();
+  }
+});
+
+// src/services/screenshot-cache-service.js
+var require_screenshot_cache_service = __commonJS({
+  "src/services/screenshot-cache-service.js"(exports2, module2) {
+    var { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
+    var path3 = require("path");
+    var fs2 = require("fs").promises;
+    var { desktopCapturer } = require("electron");
+    var os = require("os");
+    var ScreenshotCacheService = class {
+      constructor() {
+        this.cacheDir = path3.join(os.homedir(), ".electron-mcp", "screenshot-cache");
+        this.systemCacheFile = path3.join(this.cacheDir, "system.png");
+        this.windowCachePrefix = path3.join(this.cacheDir, "window_");
+        this.workers = [];
+        this.workerCount = Math.min(os.cpus().length, 4);
+        this.isRunning = false;
+        this.cacheInterval = null;
+        this.windowManager = null;
+        this.init();
+      }
+      /**
+       * Initialize cache service
+       */
+      async init() {
+        try {
+          await fs2.mkdir(this.cacheDir, { recursive: true });
+          this.windowManager = require_window_manager();
+          console.log(`[ScreenshotCache] Initialized with ${this.workerCount} workers`);
+        } catch (error) {
+          console.error("[ScreenshotCache] Init failed:", error);
+        }
+      }
+      /**
+       * Start background caching
+       */
+      start() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.startWorkers();
+        this.cacheInterval = setInterval(() => {
+          this.scheduleScreenshotCache();
+        }, 1e3);
+        console.log("[ScreenshotCache] Started background caching");
+      }
+      /**
+       * Stop background caching
+       */
+      stop() {
+        if (!this.isRunning) return;
+        this.isRunning = false;
+        if (this.cacheInterval) {
+          clearInterval(this.cacheInterval);
+          this.cacheInterval = null;
+        }
+        this.stopWorkers();
+        console.log("[ScreenshotCache] Stopped background caching");
+      }
+      /**
+       * Start worker threads
+       */
+      startWorkers() {
+        for (let i = 0; i < this.workerCount; i++) {
+          const worker = new Worker(__filename, {
+            workerData: { workerId: i }
+          });
+          worker.on("message", (result) => {
+            this.handleWorkerMessage(result);
+          });
+          worker.on("error", (error) => {
+            console.error(`[ScreenshotCache] Worker ${i} error:`, error);
+          });
+          worker.on("exit", (code) => {
+            if (code !== 0) {
+              console.error(`[ScreenshotCache] Worker ${i} stopped with exit code ${code}`);
+            }
+          });
+          this.workers.push(worker);
+        }
+      }
+      /**
+       * Stop worker threads
+       */
+      stopWorkers() {
+        this.workers.forEach((worker) => {
+          worker.terminate();
+        });
+        this.workers = [];
+      }
+      /**
+       * Schedule screenshot caching tasks
+       */
+      scheduleScreenshotCache() {
+        if (!this.isRunning) return;
+        const windows = this.windowManager.getAllWindows();
+        const tasks = [];
+        tasks.push({
+          type: "system",
+          cacheFile: this.systemCacheFile,
+          workerId: 0
+        });
+        windows.forEach((accountWindows) => {
+          Object.values(accountWindows).forEach((windowInfo) => {
+            if (windowInfo.win && !windowInfo.win.isDestroyed()) {
+              const winId = windowInfo.id;
+              tasks.push({
+                type: "window",
+                winId,
+                cacheFile: `${this.windowCachePrefix}${winId}.png`,
+                wcId: windowInfo.wcId
+              });
+            }
+          });
+        });
+        tasks.forEach((task, index) => {
+          const workerIndex = index % this.workerCount;
+          if (this.workers[workerIndex]) {
+            this.workers[workerIndex].postMessage({
+              ...task,
+              workerId: workerIndex
+            });
+          }
+        });
+      }
+      /**
+       * Handle worker messages
+       */
+      handleWorkerMessage(result) {
+        if (result.error) {
+          console.error(`[ScreenshotCache] Worker ${result.workerId} failed:`, result.error);
+        } else {
+          console.log(`[ScreenshotCache] Cached ${result.type} screenshot (${result.size} bytes)`);
+        }
+      }
+      /**
+       * Get cached screenshot
+       */
+      async getCachedScreenshot(type, winId = null) {
+        try {
+          let cacheFile;
+          if (type === "system") {
+            cacheFile = this.systemCacheFile;
+          } else if (type === "window" && winId) {
+            cacheFile = `${this.windowCachePrefix}${winId}.png`;
+          } else {
+            throw new Error("Invalid screenshot type");
+          }
+          const buffer = await fs2.readFile(cacheFile);
+          return buffer;
+        } catch (error) {
+          console.error(`[ScreenshotCache] Cache miss for ${type} ${winId || ""}:`, error.message);
+          return null;
+        }
+      }
+      /**
+       * Capture live screenshot
+       */
+      async captureLiveScreenshot(type, winId = null) {
+        if (type === "system") {
+          return await this.captureSystemLive();
+        } else if (type === "window" && winId) {
+          return await this.captureWindowLive(winId);
+        } else {
+          throw new Error("Invalid screenshot type");
+        }
+      }
+      /**
+       * Capture live system screenshot
+       */
+      async captureSystemLive() {
+        try {
+          const sources = await desktopCapturer.getSources({
+            types: ["screen"],
+            thumbnailSize: { width: 1920, height: 1080 }
+          });
+          if (sources.length === 0) {
+            throw new Error("No screen sources found");
+          }
+          const image = sources[0].thumbnail;
+          return image.toPNG();
+        } catch (error) {
+          console.error("[ScreenshotCache] Live system capture failed:", error);
+          throw error;
+        }
+      }
+      /**
+       * Capture live window screenshot
+       */
+      async captureWindowLive(winId) {
+        try {
+          const win = this.windowManager.getWindow(winId);
+          if (!win || win.isDestroyed()) {
+            throw new Error("Window not found");
+          }
+          const image = await win.webContents.capturePage();
+          const scaleFactor = 0.5;
+          const scaled = image.resize({
+            width: Math.floor(image.getSize().width * scaleFactor),
+            height: Math.floor(image.getSize().height * scaleFactor)
+          });
+          return scaled.toPNG();
+        } catch (error) {
+          console.error(`[ScreenshotCache] Live window ${winId} capture failed:`, error);
+          throw error;
+        }
+      }
+    };
+    if (!isMainThread) {
+      const { desktopCapturer: desktopCapturer2 } = require("electron");
+      const fs3 = require("fs").promises;
+      const { workerData: workerData2 } = require("worker_threads");
+      const { webContents: webContents2 } = require("electron");
+      parentPort.on("message", async (task) => {
+        try {
+          let buffer;
+          if (task.type === "system") {
+            const sources = await desktopCapturer2.getSources({
+              types: ["screen"],
+              thumbnailSize: { width: 1920, height: 1080 }
+            });
+            if (sources.length === 0) {
+              throw new Error("No screen sources found");
+            }
+            buffer = sources[0].thumbnail.toPNG();
+          } else if (task.type === "window") {
+            const wc = webContents2.fromId(task.wcId);
+            if (!wc) {
+              throw new Error("WebContents not found");
+            }
+            const image = await wc.capturePage();
+            const scaleFactor = 0.5;
+            const scaled = image.resize({
+              width: Math.floor(image.getSize().width * scaleFactor),
+              height: Math.floor(image.getSize().height * scaleFactor)
+            });
+            buffer = scaled.toPNG();
+          } else {
+            throw new Error("Unknown task type");
+          }
+          await fs3.writeFile(task.cacheFile, buffer);
+          parentPort.postMessage({
+            success: true,
+            type: task.type,
+            winId: task.winId,
+            size: buffer.length,
+            workerId: task.workerId
+          });
+        } catch (error) {
+          parentPort.postMessage({
+            success: false,
+            error: error.message,
+            type: task.type,
+            winId: task.winId,
+            workerId: task.workerId
+          });
+        }
+      });
+    }
+    module2.exports = new ScreenshotCacheService();
   }
 });
 
@@ -74670,6 +75381,151 @@ var require_mcp_integration = __commonJS({
             };
           }
         });
+        this.registerTool("pyautogui_click", "Perform mouse click at coordinates using PyAutoGUI", {
+          x: z.number().optional().describe("X coordinate (optional, clicks at current position if not specified)"),
+          y: z.number().optional().describe("Y coordinate (optional, clicks at current position if not specified)")
+        }, async ({ x, y }) => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiClick", { x, y });
+            return {
+              content: [{ type: "text", text: `PyAutoGUI clicked at (${x || "current"}, ${y || "current"})` }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_move", "Move mouse to coordinates using PyAutoGUI", {
+          x: z.number().describe("X coordinate"),
+          y: z.number().describe("Y coordinate")
+        }, async ({ x, y }) => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiMove", { x, y });
+            return {
+              content: [{ type: "text", text: `PyAutoGUI moved mouse to (${x}, ${y})` }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_type", "Type text using PyAutoGUI", {
+          text: z.string().describe("Text to type")
+        }, async ({ text }) => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiType", { text });
+            return {
+              content: [{ type: "text", text: `PyAutoGUI typed: "${text}"` }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_press", "Press a single key using PyAutoGUI. Supports letters, numbers, special keys (enter, space, backspace, esc), function keys (f1-f24), modifier keys (ctrl, alt, shift), and many more.", {
+          key: z.string().describe('Key to press (e.g., "a", "enter", "f1", "ctrl", "space", "esc", "backspace", "tab", "up", "down", "left", "right")')
+        }, async ({ key }) => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiPress", { key });
+            return {
+              content: [{ type: "text", text: `PyAutoGUI pressed key: "${key}"` }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_paste", "Paste from clipboard using PyAutoGUI", {}, async () => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiPaste", {});
+            return {
+              content: [{ type: "text", text: "PyAutoGUI pasted from clipboard" }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_press_enter", "Press Enter key using PyAutoGUI", {}, async () => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiPressEnter", {});
+            return {
+              content: [{ type: "text", text: "PyAutoGUI pressed Enter" }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_press_backspace", "Press Backspace key using PyAutoGUI", {}, async () => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiPressBackspace", {});
+            return {
+              content: [{ type: "text", text: "PyAutoGUI pressed Backspace" }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_press_space", "Press Space key using PyAutoGUI", {}, async () => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiPressSpace", {});
+            return {
+              content: [{ type: "text", text: "PyAutoGUI pressed Space" }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_press_esc", "Press Escape key using PyAutoGUI", {}, async () => {
+          try {
+            await this.rpcHandler.handleMethod("pyautoguiPressEsc", {});
+            return {
+              content: [{ type: "text", text: "PyAutoGUI pressed Escape" }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
+        this.registerTool("pyautogui_screenshot", "Take a screenshot using PyAutoGUI", {}, async () => {
+          try {
+            const result = await this.rpcHandler.handleMethod("pyautoguiScreenshot", {});
+            const { base64, format } = result.result;
+            return {
+              content: [{
+                type: "image",
+                data: `data:image/${format};base64,${base64}`,
+                mimeType: `image/${format}`
+              }]
+            };
+          } catch (error) {
+            return {
+              content: [{ type: "text", text: `Error: ${error.message}` }],
+              isError: true
+            };
+          }
+        });
       }
       /**
        * Debugging tools
@@ -74911,23 +75767,81 @@ var require_express_server = __commonJS({
         this.server = null;
         this.rpcHandler = require_rpc_handler();
         this.appManager = require_app_manager();
+        this.apiToken = this.generateToken();
+        console.log(`[API Token] ${this.apiToken}`);
       }
       /**
-       * Initialize and start the Express server
+       * Generate a random API token
+       */
+      generateToken() {
+        const crypto = require("crypto");
+        return crypto.randomBytes(32).toString("hex");
+      }
+      /**
+       * Initialize and start Express server
        */
       start() {
         this.app = express();
+        this.app.set("trust proxy", true);
         this.setupMiddleware();
         this.setupRoutes();
         this.startServer();
+        this.startScreenshotCache();
         return this.app;
+      }
+      /**
+       * Start screenshot cache service
+       */
+      startScreenshotCache() {
+        try {
+          const screenshotCache = require_screenshot_cache_service();
+          screenshotCache.start();
+          console.log("[ExpressServer] Screenshot cache service started");
+        } catch (error) {
+          console.error("[ExpressServer] Failed to start screenshot cache:", error);
+        }
       }
       /**
        * Set up Express middleware
        */
       setupMiddleware() {
+        this.app.use(this.authMiddleware.bind(this));
+        this.app.use((req, res, next) => {
+          const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+          console.log(`[${timestamp}] ${req.method} ${req.url}`);
+          next();
+        });
         this.app.use(cors());
         this.app.use(express.json({ limit: "50mb" }));
+      }
+      /**
+       * Authentication middleware
+       * Allows local requests (127.0.0.1/localhost) without token
+       * Requires token for external requests
+       */
+      authMiddleware(req, res, next) {
+        const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+        const hostname = req.hostname;
+        const host = req.get("Host") || "";
+        const forwardedHost = req.get("X-Forwarded-Host") || "";
+        const isLocalRequest = clientIP === "127.0.0.1" || clientIP === "::1" || clientIP === "::ffff:127.0.0.1" || hostname === "localhost" || hostname === "127.0.0.1" || host.includes("localhost") || host.includes("127.0.0.1") || forwardedHost.includes("localhost") || forwardedHost.includes("127.0.0.1");
+        if (isLocalRequest) {
+          return next();
+        }
+        const authHeader = req.headers.authorization || req.headers["x-api-token"];
+        const token = authHeader ? authHeader.replace("Bearer ", "").replace("Token ", "") : null;
+        if (!token) {
+          return res.status(401).json({
+            error: "API token required for external requests",
+            message: "Include token in Authorization header: Bearer <token> or X-API-Token header"
+          });
+        }
+        if (token !== this.apiToken) {
+          return res.status(403).json({
+            error: "Invalid API token"
+          });
+        }
+        next();
       }
       /**
        * Set up routes
@@ -74938,25 +75852,92 @@ var require_express_server = __commonJS({
         this.app.get("/", async (req, res) => {
           res.status(200).json({ message: "pong" });
         });
+        this.app.get("/token", (req, res) => {
+          res.json({
+            token: this.apiToken,
+            message: "Use this token in Authorization header: Bearer <token> or X-API-Token header"
+          });
+        });
         this.app.get("/screenshot", this.handleScreenshot.bind(this));
+        this.app.get("/screen", this.handlePyAutoGUIScreenshot.bind(this));
         this.app.post("/rpc", this.handleRpc.bind(this));
         this.app.get("/mcp", this.handleMcpSSE.bind(this));
         this.app.post("/messages", this.handleMcp.bind(this));
       }
       /**
-       * Handle screenshot requests
+        * Handle system screenshot requests
+        */
+      async handlePyAutoGUIScreenshot(req, res) {
+        try {
+          const screenshotCache = require_screenshot_cache_service();
+          const isLive = req.query.live === "1";
+          let imgBuffer;
+          if (isLive) {
+            imgBuffer = await screenshotCache.captureLiveScreenshot("system");
+            console.log("[screen] Live screenshot captured");
+          } else {
+            imgBuffer = await screenshotCache.getCachedScreenshot("system");
+            if (!imgBuffer) {
+              imgBuffer = await screenshotCache.captureLiveScreenshot("system");
+              console.log("[screen] Cache miss, using live capture");
+            } else {
+              console.log("[screen] Cached screenshot served");
+            }
+          }
+          res.set("Content-Type", "image/png");
+          res.send(imgBuffer);
+        } catch (err) {
+          console.error("[screen]", err.stack);
+          res.status(500).json({ error: err.message });
+        }
+      }
+      /**
+       * Handle PyAutoGUI screenshot requests with path parameter
        */
+      async handlePyAutoGUIScreenshotPath(req, res) {
+        try {
+          const filename = req.params.filename || "screen.png";
+          const filePath = `c:\\${filename}`;
+          const result = await this.rpcHandler.handleMethod("pyautoguiScreenshot", {});
+          if (!result.ok) {
+            return res.status(500).json({ error: result.result });
+          }
+          const { base64 } = result.result;
+          const imgBuffer = Buffer.from(base64, "base64");
+          const fs3 = require("fs").promises;
+          await fs3.writeFile(filePath, imgBuffer);
+          res.json({ message: `Screenshot saved to ${filePath}` });
+        } catch (err) {
+          console.error("[screenpath]", err);
+          res.status(500).json({ error: err.message });
+        }
+      }
+      /**
+        * Handle window screenshot requests
+        */
       async handleScreenshot(req, res) {
         try {
           const winId = req.query.id ? Number(req.query.id) : null;
-          const win = winId ? require_window_manager().getWindow(winId) : null;
-          if (!win) {
-            return res.status(404).json({ error: "Window not found" });
+          const isLive = req.query.live === "1";
+          if (!winId) {
+            return res.status(400).json({ error: "Window ID is required" });
           }
-          const scaled = await this.getScreenshot(win.webContents);
-          const buffer = scaled.toPNG();
+          const screenshotCache = require_screenshot_cache_service();
+          let imgBuffer;
+          if (isLive) {
+            imgBuffer = await screenshotCache.captureLiveScreenshot("window", winId);
+            console.log(`[screenshot] Live screenshot captured for window ${winId}`);
+          } else {
+            imgBuffer = await screenshotCache.getCachedScreenshot("window", winId);
+            if (!imgBuffer) {
+              imgBuffer = await screenshotCache.captureLiveScreenshot("window", winId);
+              console.log(`[screenshot] Cache miss, using live capture for window ${winId}`);
+            } else {
+              console.log(`[screenshot] Cached screenshot served for window ${winId}`);
+            }
+          }
           res.setHeader("Content-Type", "image/png");
-          res.send(buffer);
+          res.send(imgBuffer);
         } catch (err) {
           console.error("[screenshot]", err);
           res.status(500).json({ error: err.message });
@@ -75028,15 +76009,24 @@ var require_express_server = __commonJS({
         });
       }
       /**
-       * Stop the server
+       * Stop the Express server
        */
       stop() {
+        try {
+          const screenshotCache = require_screenshot_cache_service();
+          screenshotCache.stop();
+          console.log("[ExpressServer] Screenshot cache service stopped");
+        } catch (error) {
+          console.error("[ExpressServer] Failed to stop screenshot cache:", error);
+        }
         if (this.server) {
-          this.server.close();
+          this.server.close(() => {
+            console.log("[ExpressServer] Server stopped");
+          });
         }
       }
       /**
-       * Get the Express app instance
+       * Get Express app instance
        */
       getApp() {
         return this.app;
@@ -75055,12 +76045,13 @@ var expressServer = require_express_server();
 contextMenu2({
   showSaveImageAs: true
 });
-app2.whenReady().then(() => {
+app2.whenReady().then(async () => {
   console.log("Electron app ready");
   console.log("session path:", session.defaultSession.getStoragePath());
+  await winManager.init();
   expressServer.start();
   if (BrowserWindow2.getAllWindows().length === 0) {
-    winManager.createWindow(0, "http://localhost:3455/", { width: 1460, height: 768 });
+    winManager.createWindow(0, "http://localhost:3456/", {});
   }
   app2.on("activate", () => {
   });
