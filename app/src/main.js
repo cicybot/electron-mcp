@@ -15,9 +15,23 @@ if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
 const logFile = path.join(logDir, 'app.log');
+const errorLogFile = path.join(logDir, 'error.log');
 const logStream = fs.createWriteStream(logFile, { flags: 'a' });
-process.stdout.pipe(logStream);
-process.stderr.pipe(logStream);
+const errorLogStream = fs.createWriteStream(errorLogFile, { flags: 'a' });
+
+// Duplicate stdout to console and log file
+const originalStdoutWrite = process.stdout.write;
+process.stdout.write = function(chunk, encoding, callback) {
+  logStream.write(chunk, encoding);
+  return originalStdoutWrite.call(this, chunk, encoding, callback);
+};
+
+// Duplicate stderr to console and error log file
+const originalStderrWrite = process.stderr.write;
+process.stderr.write = function(chunk, encoding, callback) {
+  errorLogStream.write(chunk, encoding);
+  return originalStderrWrite.call(this, chunk, encoding, callback);
+};
 
 // Import modular components
 const appManager = require('./core/app-manager');
