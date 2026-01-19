@@ -11515,12 +11515,6 @@ var require_window_manager = __commonJS({
         const partition = `persist:p_${accountIndex}`;
         finalOptions.webPreferences.partition = partition;
         let finalUrl = url;
-        if (wrapUrl) {
-          const appManager3 = require_app_manager();
-          const baseUrl = appManager3.isLocalMode() ? "http://127.0.0.1:3455" : "https://render.cicy.de5.net";
-          finalUrl = `${baseUrl}/render?u=${encodeURIComponent(url)}`;
-        }
-        console.log(appManager2.isLocalMode(), finalUrl);
         const win = new BrowserWindow3(finalOptions);
         const wc = win.webContents;
         const winId = win.id;
