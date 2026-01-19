@@ -212,12 +212,10 @@ class RPCHandler {
 
         case 'writeClipboard':
           if (params?.text) {
-            const { exec } = require('child_process');
-            const { promisify } = require('util');
-            const execAsync = promisify(exec);
+            const { clipboard } = require('electron');
             
             try {
-              await execAsync(`python -c "import pyperclip; pyperclip.copy('${params.text.replace(/'/g, "\\'")}')"`);
+              clipboard.writeText(params.text);
             } catch (error) {
               console.error('Failed to write to clipboard:', error);
               throw new Error(`Clipboard write failed: ${error.message}`);
