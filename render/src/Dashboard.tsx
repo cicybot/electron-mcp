@@ -69,14 +69,11 @@ export const Dashboard = () => {
 
   const handleSelectWindow = async (id: number, url: string) => {
     try {
-      // Open the window in a new browser window
-      await rpc('focusWindow', { window_id: id });
-      // Alternatively, you could open the URL directly in a new browser tab:
-      // window.open(url, '_blank');
+      // Open window detail page in new browser tab with win_id parameter
+      const detailUrl = `${window.location.origin}/render?win_id=${id}&url=${encodeURIComponent(url)}`;
+      window.open(detailUrl, '_blank');
     } catch (e) {
-      console.error('Failed to focus window:', e);
-      // Fallback to opening URL in new tab
-      window.open(url, '_blank');
+      console.error('Failed to open detail page:', e);
     }
   };
 
@@ -159,7 +156,7 @@ export const Dashboard = () => {
                       onClick={() => handleSelectWindow(info.id, url)}
                       style={{ background: 'var(--bg-card)' }}
                     >
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-start mb-2">
                         <div className="flex-1 min-w-0">
                           <div className="font-mono text-sm font-semibold">win_id: {info.id}</div>
                           <div className="text-xs text-secondary truncate" style={{ maxWidth: '500px' }}>
@@ -170,6 +167,12 @@ export const Dashboard = () => {
                           #{info.id}
                         </div>
                       </div>
+                      {info.bounds && (
+                        <div className="flex gap-4 text-xs font-mono text-secondary">
+                          <span>📐 {info.bounds.width}×{info.bounds.height}</span>
+                          <span>📍 ({info.bounds.x}, {info.bounds.y})</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

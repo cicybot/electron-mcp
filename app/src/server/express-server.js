@@ -16,6 +16,18 @@ class ExpressServer {
     this.server = null;
     this.rpcHandler = require('./rpc-handler');
     this.appManager = require('../core/app-manager');
+    this.apiToken = this.generateToken();
+
+    // Print token on startup
+    console.log(`[API Token] ${this.apiToken}`);
+  }
+
+  /**
+   * Generate a random API token
+   */
+  generateToken() {
+    const crypto = require('crypto');
+    return crypto.randomBytes(32).toString('hex');
   }
 
   /**
