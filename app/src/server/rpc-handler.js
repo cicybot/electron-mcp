@@ -197,6 +197,46 @@ class RPCHandler {
           }
           break;
 
+        case 'sendElectronPressEnter':
+          if (wc) {
+            await wc.sendInputEvent({
+              type: 'keyDown',
+              keyCode: 'Return'
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'Return'
+            });
+          }
+          break;
+
+        case 'writeClipboard':
+          if (params?.text) {
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            
+            try {
+              await execAsync(`python -c "import pyperclip; pyperclip.copy('${params.text.replace(/'/g, "\\'")}')"`);
+            } catch (error) {
+              console.error('Failed to write to clipboard:', error);
+              throw new Error(`Clipboard write failed: ${error.message}`);
+            }
+          }
+          break;
+
+        case 'showFloatDiv':
+          if (wc) {
+            await wc.executeJavaScript("window._G.showFloatDiv()");
+          }
+          break;
+
+        case 'hideFloatDiv':
+          if (wc) {
+            await wc.executeJavaScript("window._G.hideFloatDiv()");
+          }
+          break;
+
         // Cookies
         case 'importCookies':
           if (wc) {
