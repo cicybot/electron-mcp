@@ -62,6 +62,9 @@ class ExpressServer {
     * Set up Express middleware
     */
    setupMiddleware() {
+     // API authentication middleware
+     this.app.use(this.authMiddleware.bind(this));
+
      // Request logging middleware
      this.app.use((req, res, next) => {
        const timestamp = new Date().toISOString();
