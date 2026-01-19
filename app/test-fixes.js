@@ -134,7 +134,7 @@ class TestSuite {
 
             // Verify build works
             try {
-                execSync('npm run build', { cwd: this.testDir, stdio: 'pipe' });
+                execSync('npm run build', { cwd: this.testDir });
                 this.addResult('Test 4: Build verification', true, '✅ Build process works correctly');
             } catch (error) {
                 this.addResult('Test 4: Build verification', false, `❌ Build failed: ${error.message}`);
