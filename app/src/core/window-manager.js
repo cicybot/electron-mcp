@@ -335,13 +335,15 @@ class WindowManager {
   /**
    * Save individual window state
    */
-  _saveWindowState(winId, win, accountIndex, url) {
+  _saveWindowState(winId, win, accountIndex) {
     try {
       if (win && !win.isDestroyed()) {
         const bounds = win.getBounds();
+        // Use the stored initial URL, not the current URL
+        const initialUrl = win._initialUrl || 'about:blank';
         this.windowStates[winId] = {
           accountIndex,
-          url,
+          url: initialUrl, // Always use the initial URL
           bounds,
           timestamp: Date.now()
         };
