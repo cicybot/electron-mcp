@@ -3,10 +3,11 @@
  * Handles browser window creation, management, and account isolation
  */
 
-const { BrowserWindow, webContents } = require('electron');
+const { BrowserWindow, webContents, app } = require('electron');
 const { MapArray } = require("../utils");
 const { setCookies,getGlobalJsCode } = require("../helpers");
 const appManager = require('./app-manager');
+const storageManager = require('./storage-manager');
 
 class WindowManager {
   constructor() {
