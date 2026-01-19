@@ -136,7 +136,8 @@ var require_utils_browser = __commonJS({
       return t;
     }
     var FLOAT_DIV_ID = "__floatDiv";
-    function showFloatDiv({ width, height, top, left }) {
+    function showFloatDiv(options) {
+      let { width, height, top, left } = options || {};
       if (!width) width = 200;
       if (!height) height = 80;
       if (!top) top = 50;
@@ -173,6 +174,46 @@ var require_utils_browser = __commonJS({
     `;
         div.appendChild(handle);
       });
+      const closeButton = document.createElement("div");
+      closeButton.innerHTML = "\xD7";
+      closeButton.style.cssText = `
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 16px;
+        height: 16px;
+        background: rgba(255, 0, 0, 0.8);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 1;
+        opacity: 1;
+    `;
+      closeButton.addEventListener("click", () => {
+        hideFloatDiv();
+      });
+      div.appendChild(closeButton);
+      const textDisplay = document.createElement("div");
+      textDisplay.style.cssText = `
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        font-size: 10px;
+        font-family: monospace;
+        color: red;
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 2px 4px;
+        border-radius: 2px;
+        pointer-events: none;
+        z-index: 2;
+    `;
+      div.appendChild(textDisplay);
       document.body.appendChild(div);
       let isDragging = false;
       let isResizing = false;
@@ -203,7 +244,7 @@ var require_utils_browser = __commonJS({
           const newTop = startTop + (e.clientY - startY);
           div.style.left = `${newLeft}px`;
           div.style.top = `${newTop}px`;
-          div.innerHTML = `Pos: ${newLeft},${newTop}<br>Size: ${div.offsetWidth}x${div.offsetHeight}`;
+          textDisplay.innerHTML = `Pos: ${newLeft},${newTop}<br>Size: ${div.offsetWidth}x${div.offsetHeight}`;
         } else if (isResizing) {
           let newWidth = startWidth;
           let newHeight = startHeight;
@@ -229,7 +270,7 @@ var require_utils_browser = __commonJS({
           div.style.height = `${finalHeight}px`;
           div.style.left = `${newLeft}px`;
           div.style.top = `${newTop}px`;
-          div.innerHTML = `Pos: ${newLeft},${newTop}<br>Size: ${finalWidth}x${finalHeight}`;
+          textDisplay.innerHTML = `Pos: ${newLeft},${newTop}<br>Size: ${finalWidth}x${finalHeight}`;
         }
       });
       document.addEventListener("mouseup", () => {
