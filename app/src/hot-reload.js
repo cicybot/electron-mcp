@@ -15,6 +15,7 @@ if (platform === 'win32') {
 }
 
 const commands = [
+  'npm run build',
   killCmd,
   sleepCmd,
   'npm start'
