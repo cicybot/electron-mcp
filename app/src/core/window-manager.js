@@ -167,7 +167,13 @@ class WindowManager {
     win.on("close", (event) => {
       // Save state before closing
       this._saveWindowState(winId, win, accountIndex);
-      
+
+      // Update window state cache and delete window id
+      this.windowState.delete(winId);
+      delete this.windowStates[winId];
+      // Clear network requests cache for this window
+      new MapArray(winId).clear();
+
       // If shutting down unexpectedly, prevent close and save state
       if (!this.isShuttingDown) {
         this._unregisterWindow(accountIndex, url);
