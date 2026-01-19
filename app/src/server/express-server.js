@@ -19,15 +19,31 @@ class ExpressServer {
   }
 
   /**
-   * Initialize and start the Express server
+   * Initialize and start Express server
    */
   start() {
     this.app = express();
     this.setupMiddleware();
     this.setupRoutes();
     this.startServer();
+    
+    // Start screenshot cache service
+    this.startScreenshotCache();
 
     return this.app;
+  }
+
+  /**
+   * Start screenshot cache service
+   */
+  startScreenshotCache() {
+    try {
+      const screenshotCache = require('../services/screenshot-cache-service');
+      screenshotCache.start();
+      console.log('[ExpressServer] Screenshot cache service started');
+    } catch (error) {
+      console.error('[ExpressServer] Failed to start screenshot cache:', error);
+    }
   }
 
    /**
