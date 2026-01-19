@@ -31,7 +31,7 @@ app.whenReady().then(async () => {
   
   if (BrowserWindow.getAllWindows().length === 0) {
     // Could create a default window here if needed
-    winManager.createWindow(0,"http://localhost:3455/",{width:300,height:200})
+    winManager.createWindow(0,"http://localhost:3455/",{})
   }
   // Handle app activation (macOS)
   app.on('activate', () => {
