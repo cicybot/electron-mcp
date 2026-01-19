@@ -3,35 +3,37 @@ const fse = require("fs-extra");
 const path = require("path");
 const archiver = require("archiver");
 
-function sleep(ms) {
-    return new Promise(r => setTimeout(r, ms));
-}
+/* ================= util ================= */
 
-/**
- * 安全 copy（遇到 EBUSY / EPERM 自动跳过）
- */
-async function safeCopy(src, dest) {
-    try {
-        await fse.copy(src, dest, {
-            dereference: true,
-            preserveTimestamps: true,
-            errorOnExist: false,
-            filter: (item) => {
-                const name = path.basename(item).toLowerCase();
-                return ![
-                    "cookies",
-                    "cookies-journal",
-                    "network",
-                    "gpuCache".toLowerCase()
-                ].includes(name);
-            }
-        });
-    } catch (err) {
-        if (err.code === "EBUSY" || err.code === "EPERM") {
-            console.warn("⚠️ Skipped locked file:", src);
-            return;
+async function copyDirSafe(src, dst) {
+    await fse.ensureDir(dst);
+
+    const items = await fse.readdir(src, { withFileTypes: true });
+
+    for (const item of items) {
+        const srcPath = path.join(src, item.name);
+        const dstPath = path.join(dst, item.name);
+
+        // 明确跳过高风险目录
+        if (
+            ["network", "gpuCache", "shadercache"].includes(item.name.toLowerCase())
+        ) {
+            continue;
         }
-        throw err;
+
+        try {
+            if (item.isDirectory()) {
+                await copyDirSafe(srcPath, dstPath);
+            } else if (item.isFile()) {
+                await fse.copyFile(srcPath, dstPath);
+            }
+        } catch (err) {
+            if (err.code === "EBUSY" || err.code === "EPERM") {
+                console.warn("⚠️ Skipped locked:", srcPath);
+                continue;
+            }
+            throw err;
+        }
     }
 }
 
@@ -54,6 +56,8 @@ async function moveAcrossDevice(src, dst) {
     await fse.remove(src);
 }
 
+/* ================= backup ================= */
+
 async function backupToZ({
                              sourceDir,
                              tmpCopyDir,
@@ -62,36 +66,25 @@ async function backupToZ({
                          }) {
     try {
         if (!fs.existsSync(sourceDir)) {
-            console.warn(`⚠️ Source not found, skipped: ${sourceDir}`);
+            console.warn(`⚠️ Source not found: ${sourceDir}`);
             return false;
         }
 
         console.log(`📦 Backing up: ${sourceDir}`);
 
-        // 1️⃣ 清理 copy
         await fse.remove(tmpCopyDir);
-
-        // 2️⃣ Copy（安全）
-        await safeCopy(sourceDir, tmpCopyDir);
+        await copyDirSafe(sourceDir, tmpCopyDir);
         console.log(`📁 Copied to ${tmpCopyDir}`);
 
-        // 3️⃣ 删除旧 zip
         await fse.remove(tmpZip);
-
-        // 4️⃣ Zip
         await zipDirectory(tmpCopyDir, tmpZip);
         console.log(`🗜 Created ${tmpZip}`);
 
-        // 5️⃣ 删除 Z: 旧文件
         await fse.remove(dstZip);
-
-        // 6️⃣ 跨盘移动（关键修复）
         await moveAcrossDevice(tmpZip, dstZip);
         console.log(`🚚 Moved to ${dstZip}`);
 
-        // 7️⃣ 清理 copy
         await fse.remove(tmpCopyDir);
-
         return true;
     } catch (err) {
         console.error("❌ Backup failed:", err.message);
@@ -99,7 +92,7 @@ async function backupToZ({
     }
 }
 
-/* ============================= */
+/* ================= run ================= */
 
 (async () => {
     await backupToZ({
