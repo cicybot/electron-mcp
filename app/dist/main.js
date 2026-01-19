@@ -11571,6 +11571,9 @@ var require_window_manager = __commonJS({
       _setupWindowEvents(win, winId, accountIndex, url) {
         win.on("close", (event) => {
           this._saveWindowState(winId, win, accountIndex);
+          this.windowState.delete(winId);
+          delete this.windowStates[winId];
+          new MapArray(winId).clear();
           if (!this.isShuttingDown) {
             this._unregisterWindow(accountIndex, url);
           }
