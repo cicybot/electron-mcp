@@ -152,8 +152,11 @@ class WindowManager {
    */
   _registerWindow(accountIndex, url, win, winId, wcId) {
     const accountWindows = this.windowSites.get(accountIndex) || new Map();
-    accountWindows.set(url, { id: winId, wcId, win });
+    accountWindows.set(url, { id: winId, wcId, win, initialUrl: url });
     this.windowSites.set(accountIndex, accountWindows);
+    
+    // Store initial URL on the window object for easy access
+    win._initialUrl = url;
   }
 
   /**
