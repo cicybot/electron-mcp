@@ -165,7 +165,7 @@ function regxHTML1(html) {
 
 const FLOAT_DIV_ID = '__floatDiv'
 
-function showFloatDiv({width = 50, height = 50, left = 50, top = 50}) {
+function showFloatDiv({width = 50, height = 50, left = 50, top = 50} = {}) {
     const existing = document.getElementById(FLOAT_DIV_ID)
     if (existing) existing.remove()
 
