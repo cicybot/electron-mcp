@@ -214,6 +214,7 @@ var require_utils_browser = __commonJS({
         z-index: 2;
     `;
       div.appendChild(textDisplay);
+      textDisplay.innerHTML = `Pos: ${left},${top}<br>Size: ${width}x${height}`;
       document.body.appendChild(div);
       let isDragging = false;
       let isResizing = false;
