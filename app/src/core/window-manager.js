@@ -166,7 +166,7 @@ class WindowManager {
     // Handle window close
     win.on("close", (event) => {
       // Save state before closing
-      this._saveWindowState(winId, win, accountIndex, url);
+      this._saveWindowState(winId, win, accountIndex);
       
       // If shutting down unexpectedly, prevent close and save state
       if (!this.isShuttingDown) {
@@ -176,11 +176,11 @@ class WindowManager {
 
     // Handle window state changes
     win.on('resize', () => {
-      this._saveWindowState(winId, win, accountIndex, url);
+      this._saveWindowState(winId, win, accountIndex);
     });
 
     win.on('move', () => {
-      this._saveWindowState(winId, win, accountIndex, url);
+      this._saveWindowState(winId, win, accountIndex);
     });
 
     // Handle navigation events for request tracking
