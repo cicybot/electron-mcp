@@ -406,13 +406,6 @@ const _l = (...args) => {
     console.debug('[CICY]', ...args);
 };
 const d = _l;
-
-// Convenience wrappers for window._G API
-if (typeof window !== 'undefined') {
-    window._G.showFloatDiv = showFloatDiv;
-    window._G.hideFloatDiv = hideFloatDiv;
-}
-
 module.exports = {
     _l,
     preload,
