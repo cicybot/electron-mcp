@@ -126,7 +126,7 @@ class WindowManager {
     this._registerWindow(accountIndex, finalUrl, win, winId, wcId);
 
     // Save initial window state
-    this._saveWindowState(winId, win, accountIndex, finalUrl);
+    this._saveWindowState(winId, win, accountIndex);
 
     // Set up event handlers
     this._setupWindowEvents(win, winId, accountIndex, finalUrl);
