@@ -19,12 +19,16 @@ contextMenu({
 /**
  * Application ready handler
  */
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   console.log('Electron app ready');
   console.log("session path:",session.defaultSession.getStoragePath())
 
+  // Initialize window manager and restore previous session
+  await winManager.init();
+
   // Start Express server (includes MCP integration)
   expressServer.start();
+  
   if (BrowserWindow.getAllWindows().length === 0) {
     // Could create a default window here if needed
     winManager.createWindow(0,"http://localhost:3455/",{width:300,height:200})
