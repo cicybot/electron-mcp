@@ -207,6 +207,32 @@ function showFloatDiv(options) {
         div.appendChild(handle)
     })
 
+    // Add close button
+    const closeButton = document.createElement('div')
+    closeButton.innerHTML = '×'
+    closeButton.style.cssText = `
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 16px;
+        height: 16px;
+        background: rgba(255, 0, 0, 0.8);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 1;
+        opacity: 1;
+    `
+    closeButton.addEventListener('click', () => {
+        hideFloatDiv()
+    })
+    div.appendChild(closeButton)
+
     document.body.appendChild(div)
 
     let isDragging = false
