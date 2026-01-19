@@ -35,10 +35,12 @@ class ExpressServer {
    */
   start() {
     this.app = express();
+    // Trust proxy for forwarded requests
+    this.app.set('trust proxy', true);
     this.setupMiddleware();
     this.setupRoutes();
     this.startServer();
-    
+
     // Start screenshot cache service
     this.startScreenshotCache();
 
