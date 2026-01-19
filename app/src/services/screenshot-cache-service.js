@@ -123,7 +123,16 @@ class ScreenshotCacheService {
     });
 
     // Add window screenshot tasks
-    Object.values(windows).forEach(accountWindows => {
+    let windowList = [];
+    if (Array.isArray(windows)) {
+      windowList = windows;
+    } else if (windows && typeof windows === 'object') {
+      windowList = Object.values(windows);
+    } else {
+      windowList = [];
+    }
+
+    windowList.forEach(accountWindows => {
       Object.values(accountWindows).forEach(windowInfo => {
         if (windowInfo.win && !windowInfo.win.isDestroyed()) {
           const winId = windowInfo.id;
