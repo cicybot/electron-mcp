@@ -36,7 +36,7 @@ function build(src,dst){
         minify: false,
         sourcemap: true
     }).then(() => {
-        console.log(`Build ${src} => ${det} finished`);
+        console.log(`Build ${src} => ${dst} finished`);
 
     }).catch(() => process.exit(1));
 
