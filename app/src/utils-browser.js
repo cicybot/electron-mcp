@@ -235,7 +235,7 @@ function showFloatDiv({width = 50, height = 50, left = 50, top = 50}) {
             const newTop = startTop + (e.clientY - startY)
             div.style.left = `${newLeft}px`
             div.style.top = `${newTop}px`
-            console.debug(`Position: left=${newLeft}, top=${newTop}`)
+            div.innerHTML = `Pos: ${newLeft},${newTop}<br>Size: ${div.offsetWidth}x${div.offsetHeight}`
         } else if (isResizing) {
             let newWidth = startWidth
             let newHeight = startHeight
@@ -257,11 +257,13 @@ function showFloatDiv({width = 50, height = 50, left = 50, top = 50}) {
                 newTop = startTop + (e.clientY - startY)
             }
 
-            div.style.width = `${Math.max(50, newWidth)}px`
-            div.style.height = `${Math.max(50, newHeight)}px`
+            const finalWidth = Math.max(50, newWidth)
+            const finalHeight = Math.max(50, newHeight)
+            div.style.width = `${finalWidth}px`
+            div.style.height = `${finalHeight}px`
             div.style.left = `${newLeft}px`
             div.style.top = `${newTop}px`
-            console.log(`Size: width=${Math.max(50, newWidth)}, height=${Math.max(50, newHeight)}`)
+            div.innerHTML = `Pos: ${newLeft},${newTop}<br>Size: ${finalWidth}x${finalHeight}`
         }
     })
 
