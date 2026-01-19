@@ -136,7 +136,11 @@ var require_utils_browser = __commonJS({
       return t;
     }
     var FLOAT_DIV_ID = "__floatDiv";
-    function showFloatDiv({ width = 50, height = 50, left = 50, top = 50 }) {
+    function showFloatDiv({ width, height, top, left }) {
+      if (!width) width = 200;
+      if (!height) height = 80;
+      if (!top) top = 50;
+      if (!left) left = 50;
       const existing = document.getElementById(FLOAT_DIV_ID);
       if (existing) existing.remove();
       const div = document.createElement("div");
@@ -199,7 +203,7 @@ var require_utils_browser = __commonJS({
           const newTop = startTop + (e.clientY - startY);
           div.style.left = `${newLeft}px`;
           div.style.top = `${newTop}px`;
-          console.debug(`Position: left=${newLeft}, top=${newTop}`);
+          div.innerHTML = `Pos: ${newLeft},${newTop}<br>Size: ${div.offsetWidth}x${div.offsetHeight}`;
         } else if (isResizing) {
           let newWidth = startWidth;
           let newHeight = startHeight;
@@ -219,11 +223,13 @@ var require_utils_browser = __commonJS({
             newHeight = startHeight - (e.clientY - startY);
             newTop = startTop + (e.clientY - startY);
           }
-          div.style.width = `${Math.max(50, newWidth)}px`;
-          div.style.height = `${Math.max(50, newHeight)}px`;
+          const finalWidth = Math.max(50, newWidth);
+          const finalHeight = Math.max(50, newHeight);
+          div.style.width = `${finalWidth}px`;
+          div.style.height = `${finalHeight}px`;
           div.style.left = `${newLeft}px`;
           div.style.top = `${newTop}px`;
-          console.log(`Size: width=${Math.max(50, newWidth)}, height=${Math.max(50, newHeight)}`);
+          div.innerHTML = `Pos: ${newLeft},${newTop}<br>Size: ${finalWidth}x${finalHeight}`;
         }
       });
       document.addEventListener("mouseup", () => {
