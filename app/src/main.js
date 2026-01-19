@@ -4,7 +4,20 @@
  */
 
 const { app,session,BrowserWindow } = require('electron');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const contextMenu = require('electron-context-menu').default || require('electron-context-menu');
+
+// Set up logging to file
+const logDir = path.join(os.homedir(), 'electron-mcp', 'logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+const logFile = path.join(logDir, 'app.log');
+const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+process.stdout.pipe(logStream);
+process.stderr.pipe(logStream);
 
 // Import modular components
 const appManager = require('./core/app-manager');
