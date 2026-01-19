@@ -237,6 +237,26 @@ class RPCHandler {
           }
           break;
 
+        case 'sendElectronCtlV':
+          if (wc) {
+            // Send Ctrl+V (Control key + V key) for paste
+            await wc.sendInputEvent({
+              type: 'keyDown',
+              keyCode: 'V',
+              modifiers: ['control']
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'V',
+              modifiers: ['control']
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'Control'
+            });
+          }
+          break;
+
         // Cookies
         case 'importCookies':
           if (wc) {
