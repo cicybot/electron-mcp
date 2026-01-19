@@ -128,16 +128,10 @@ class ExpressServer {
        }
      }
 
-        const { base64 } = result.result;
-        const imgBuffer = Buffer.from(base64, 'base64');
-
-        res.set('Content-Type', 'image/png');
-        res.send(imgBuffer);
-      } catch (err) {
-        console.error('[screen]', err.stack);
-        res.status(500).json({ error: err.message });
-      }
-    }
+    /**
+     * Handle PyAutoGUI screenshot requests with path parameter
+     */
+    async handlePyAutoGUIScreenshotPath(req, res) {
 
     /**
      * Handle PyAutoGUI screenshot requests with path parameter
