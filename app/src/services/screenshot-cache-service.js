@@ -109,7 +109,7 @@ class ScreenshotCacheService {
   /**
    * Schedule screenshot caching tasks
    */
-  scheduleScreenshotCache() {
+  async scheduleScreenshotCache() {
     if (!this.isRunning) return;
 
     const windows = this.windowManager.getAllWindows();
@@ -137,16 +137,30 @@ class ScreenshotCacheService {
       });
     });
 
-    // Distribute tasks to available workers
-    tasks.forEach((task, index) => {
-      const workerIndex = index % this.workerCount;
-      if (this.workers[workerIndex]) {
-        this.workers[workerIndex].postMessage({
-          ...task,
-          workerId: workerIndex
-        });
+    // Process tasks asynchronously
+    const promises = tasks.map(async (task, index) => {
+      try {
+        let buffer;
+        if (task.type === 'system') {
+          buffer = await this.captureSystemLive();
+        } else if (task.type === 'window') {
+          buffer = await this.captureWindowLive(task.winId);
+        }
+
+        const workerIndex = index % this.workerCount;
+        if (this.workers[workerIndex]) {
+          this.workers[workerIndex].postMessage({
+            buffer,
+            ...task,
+            workerId: workerIndex
+          });
+        }
+      } catch (error) {
+        console.error(`[ScreenshotCache] Capture failed for ${task.type} ${task.winId || ''}:`, error);
       }
     });
+
+    await Promise.all(promises);
   }
 
   /**
