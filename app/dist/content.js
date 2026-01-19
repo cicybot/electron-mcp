@@ -203,7 +203,7 @@ var require_utils_browser = __commonJS({
         position: absolute;
         top: 2px;
         left: 2px;
-        font-size: 10px;
+        font-size: 14px;
         font-family: monospace;
         color: red;
         opacity: 1;
