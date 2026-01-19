@@ -316,6 +316,20 @@ class WindowManager {
   }
 
   /**
+   * Update window title with win_id prefix
+   */
+  _updateWindowTitle(winId, win, documentTitle = null) {
+    try {
+      if (win && !win.isDestroyed()) {
+        const title = documentTitle || win.webContents.getTitle();
+        win.setTitle(`#${winId} ${title}`);
+      }
+    } catch (error) {
+      console.error(`Failed to update window title for ${winId}:`, error);
+    }
+  }
+
+  /**
    * Save individual window state
    */
   _saveWindowState(winId, win, accountIndex, url) {
