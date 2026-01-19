@@ -434,6 +434,7 @@ var require_utils = __commonJS({
       return res.json();
     };
     function openWindow(url, options, others) {
+      console.log(url);
       return post_rpc({
         method: "openWindow",
         params: {

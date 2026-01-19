@@ -27,6 +27,7 @@ var require_utils = __commonJS({
       return res.json();
     };
     function openWindow2(url, options, others) {
+      console.log(url);
       return post_rpc({
         method: "openWindow",
         params: {

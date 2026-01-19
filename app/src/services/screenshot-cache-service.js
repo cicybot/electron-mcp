@@ -10,7 +10,7 @@ const os = require('os');
 
 class ScreenshotCacheService {
   constructor() {
-    this.cacheDir = path.join(os.homedir(), '.electron-mcp', 'screenshot-cache');
+    this.cacheDir = path.join(os.homedir(), 'electron-mcp', 'screenshot-cache');
     this.systemCacheFile = path.join(this.cacheDir, 'system.png');
     this.windowCachePrefix = path.join(this.cacheDir, 'window_');
     this.workers = [];

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/main.js",
   "scripts": {
-    "start": "npm run build && electron --trace-warnings src/main.js",
+    "start": "ps aux | grep electron | grep -v grep | awk '{print $2}' | xargs kill -9 && npm run build && electron --trace-warnings src/main.js",
     "prod": "electron dist/main.js",
     "dev": "nodemon",
     "auto-reload": "npm start && nodemon --watch src --exec \"node src/auto-reload.js\" --delay 1",

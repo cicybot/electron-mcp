@@ -10813,6 +10813,7 @@ var require_utils = __commonJS({
       return res.json();
     };
     function openWindow(url, options, others) {
+      console.log(url);
       return post_rpc({
         method: "openWindow",
         params: {
@@ -39130,7 +39131,7 @@ var require_screenshot_cache_service = __commonJS({
     var os2 = require("os");
     var ScreenshotCacheService = class {
       constructor() {
-        this.cacheDir = path4.join(os2.homedir(), ".electron-mcp", "screenshot-cache");
+        this.cacheDir = path4.join(os2.homedir(), "electron-mcp", "screenshot-cache");
         this.systemCacheFile = path4.join(this.cacheDir, "system.png");
         this.windowCachePrefix = path4.join(this.cacheDir, "window_");
         this.workers = [];
