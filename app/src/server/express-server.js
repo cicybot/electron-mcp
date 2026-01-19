@@ -132,11 +132,6 @@ class ExpressServer {
      * Handle PyAutoGUI screenshot requests with path parameter
      */
     async handlePyAutoGUIScreenshotPath(req, res) {
-
-    /**
-     * Handle PyAutoGUI screenshot requests with path parameter
-     */
-    async handlePyAutoGUIScreenshotPath(req, res) {
       try {
         const filename = req.params.filename || 'screen.png';
         const filePath = `c:\\${filename}`;
