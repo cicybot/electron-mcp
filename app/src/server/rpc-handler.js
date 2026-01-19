@@ -225,7 +225,8 @@ class RPCHandler {
 
         case 'showFloatDiv':
           if (wc) {
-            await wc.executeJavaScript("window._G.showFloatDiv()");
+            const options = params || {};
+            await wc.executeJavaScript(`window._G.showFloatDiv(${JSON.stringify(options)})`);
           }
           break;
 
