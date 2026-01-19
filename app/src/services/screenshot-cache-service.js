@@ -63,11 +63,16 @@ stop() {
       });
       
       worker.on('message', (result) => {
+        console.log(`[ScreenshotCache] Worker ${i} message:`, result);
         this.handleWorkerMessage(result);
       });
       
       worker.on('error', (error) => {
         console.error(`[ScreenshotCache] Worker ${i} error:`, error);
+      });
+
+      worker.on('messageerror', (error) => {
+        console.error(`[ScreenshotCache] Worker ${i} messageerror:`, error);
       });
       
       worker.on('exit', (code) => {
@@ -130,14 +135,19 @@ stop() {
       });
     });
 
+    console.log(`[ScreenshotCache] Scheduling ${tasks.length} tasks (system + windows)`);
+    
     // Process tasks asynchronously
     const promises = tasks.map(async (task, index) => {
       try {
         let buffer;
         if (task.type === 'system') {
           buffer = await this.captureSystemLive();
+          console.log(`[ScreenshotCache] Captured system screenshot, buffer size: ${buffer.length}`);
         } else if (task.type === 'window') {
+          console.log(`[ScreenshotCache] Capturing window ${task.winId}...`);
           buffer = await this.captureWindowLive(task.winId);
+          console.log(`[ScreenshotCache] Captured window ${task.winId}, buffer size: ${buffer.length}`);
         }
 
         const workerIndex = index % this.workerCount;
@@ -147,6 +157,9 @@ stop() {
             ...task,
             workerId: workerIndex
           });
+          console.log(`[ScreenshotCache] Sent task to worker ${workerIndex}: ${task.type} ${task.winId || ''}`);
+        } else {
+          console.error(`[ScreenshotCache] Worker ${workerIndex} not available`);
         }
       } catch (error) {
         console.error(`[ScreenshotCache] Capture failed for ${task.type} ${task.winId || ''}:`, error);
@@ -208,6 +221,7 @@ stop() {
    */
   async captureSystemLive() {
     try {
+      const { desktopCapturer } = require('electron');
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
         thumbnailSize: { width: 1920, height: 1080 }
@@ -261,8 +275,12 @@ if (!isMainThread) {
     try {
       const { buffer, cacheFile, type, winId, workerId } = task;
 
+      console.log(`[ScreenshotCache-Worker ${workerId}] Processing task:`, { type, winId, cacheFile, bufferSize: buffer ? buffer.length : 0 });
+
       // Write buffer to cache file
       await fs.writeFile(cacheFile, buffer);
+
+      console.log(`[ScreenshotCache-Worker ${workerId}] Successfully wrote ${buffer.length} bytes to ${cacheFile}`);
 
       parentPort.postMessage({
         success: true,
@@ -273,6 +291,7 @@ if (!isMainThread) {
       });
 
     } catch (error) {
+      console.error(`[ScreenshotCache-Worker ${task.workerId}] Error:`, error);
       parentPort.postMessage({
         success: false,
         error: error.message,

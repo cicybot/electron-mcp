@@ -4,6 +4,7 @@ import { useRpc } from './RpcContext';
 import { ConnectionManager } from './ConnectionManager';
 import { IconAlert } from './Icons';
 import { WindowMap } from './types';
+import View from './View';
 
 export const Dashboard = () => {
   const { rpc } = useRpc();
@@ -82,7 +83,7 @@ export const Dashboard = () => {
       {/* Header */}
       <header className="flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}>
         <div className="flex items-center gap-2">
-          <h1 className="font-bold text-lg">Electron RPC Pilot</h1>
+          <h1 className="font-bold text-lg">ElectronMcp</h1>
           <span className="badge text-secondary">v1.1</span>
         </div>
         <div>
@@ -104,7 +105,7 @@ export const Dashboard = () => {
         {/* Create Bar */}
         <div className="card p-4 mb-6 flex items-end gap-4">
           <div className="flex-1">
-            <label className="block text-xs text-secondary mb-1">Target URL</label>
+            <label className="block text-xs text-secondary mb-1">URL</label>
             <input
               className="input w-full"
               value={newUrl}
@@ -113,7 +114,7 @@ export const Dashboard = () => {
             />
           </div>
           <div style={{ width: '120px' }}>
-            <label className="block text-xs text-secondary mb-1">Account Index</label>
+            <label className="block text-xs text-secondary mb-1">Account</label>
             <input
               type="number"
               className="input w-full"
@@ -126,7 +127,21 @@ export const Dashboard = () => {
             onClick={handleOpenWindow}
             disabled={isCreating}
           >
-            {isCreating ? 'Launching...' : 'Open Window'}
+            {isCreating ? 'Launching...' : 'Open'}
+          </button>
+          <View w={12}></View>
+          <button
+              className="btn btn-success"
+              onClick={()=>{
+                try {
+                  const detailUrl = `${window.location.origin}/render?desktop=1`;
+                  window.open(detailUrl, '_blank');
+                } catch (e) {
+                  console.error('Failed to open detail page:', e);
+                }
+              }}
+          >
+            Desktop
           </button>
         </div>
 
@@ -154,7 +169,7 @@ export const Dashboard = () => {
                       key={info.id}
                       className="p-3 border border-border rounded mb-2 cursor-pointer hover:bg-hover transition-colors"
                       onClick={() => handleSelectWindow(info.id, url)}
-                      style={{ background: 'var(--bg-card)' }}
+                      style={{ background: 'var(--bg-card)',marginBottom:16 }}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1 min-w-0">

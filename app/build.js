@@ -13,16 +13,6 @@ esbuild.build({
     sourcemap: true
 }).then(() => {
     console.log('Build finished');
-    // Copy content.js to dist
-    const srcContent = path.join(__dirname, 'src/content-inject.js');
-    const distContent = path.join(__dirname, 'dist/content.js');
-    fs.copyFile(srcContent, distContent, (err) => {
-        if (err) {
-            console.error('Failed to copy content.js:', err);
-        } else {
-            console.log('content.js copied to dist');
-        }
-    });
 
 }).catch(() => process.exit(1));
 
@@ -41,8 +31,25 @@ function build(src,dst){
     }).catch(() => process.exit(1));
 
 }
+
+function buildBrowser(src,dst){
+    return esbuild.build({
+        entryPoints: [src],
+        bundle: true,
+        platform: 'browser',
+        format: 'iife',
+        outfile: dst,
+        external: [],
+        minify: false,
+        sourcemap: false
+    }).then(() => {
+        console.log(`Build browser ${src} => ${dst} finished`);
+
+    }).catch(() => process.exit(1));
+
+}
 async function main(){
-    build('src/content-inject.js', 'dist/content.js')
+    buildBrowser('src/content-inject.js', 'dist/content.js')
     build('src/extension/content.js', '../chrome-extension/content.js')
     build('src/extension/background.js', '../chrome-extension/background.js')
 }

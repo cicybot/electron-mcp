@@ -1,4 +1,5 @@
-(() => {
-    window._G = require("./utils-browser");
-    window._G.utils =  require("./utils");
-})()
+const utilsBrowser = require("./utils-browser");
+const utils = require("./utils");
+
+window._G = utilsBrowser;
+window._G.utils = utils;

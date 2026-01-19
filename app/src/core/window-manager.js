@@ -17,6 +17,7 @@ class WindowManager {
     this.requestIndex = 0;
     this.windowStates = {}; // For persistent storage
     this.isShuttingDown = false;
+    this.winIdRemapping = new Map(); // old_id -> new_id (for restoration)
     
     // Set up auto-save interval
     this.autoSaveInterval = setInterval(() => {
@@ -373,7 +374,7 @@ class WindowManager {
         const state = savedStates[winId];
         if (state && state.accountIndex !== undefined && state.url) {
           console.log(`Restoring window ${winId}: ${state.url}`);
-          await this.createWindow(
+          const win = await this.createWindow(
             state.accountIndex,
             state.url,
             state.bounds || {},
@@ -386,6 +387,12 @@ class WindowManager {
               showWin: true
             }
           );
+          
+          if (win) {
+            const newWinId = win.id;
+            this.winIdRemapping.set(parseInt(winId), newWinId);
+            console.log(`Mapped old ID ${winId} -> new ID ${newWinId}`);
+          }
         }
       }
     } catch (error) {

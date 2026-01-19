@@ -89,11 +89,6 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
         }
     };
 
-    const removeLogin = async () => {
-        const code = `document.querySelectorAll('div[id^="login-full-panel-"]').forEach(el => el.remove());`
-        await rpc('executeJavaScript', { win_id: windowId, code });
-        setTimeout(refreshScreenshot, 500);
-    }
 
     // Auto-fetch screenshot as blob URL
     useEffect(() => {
@@ -125,226 +120,100 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
         };
     }, [windowId, rpcBaseUrl]);
 
+    const onClickImage = (e,type)=>{
+        e.preventDefault();
+        // 获取鼠标相对于图片的坐标
+        var x = parseInt(e.clientX + document.querySelector("#screen").scrollLeft) -64;
+        var y = parseInt(e.clientY+ document.querySelector("#screen").scrollTop) -64;
+        // 弹出显示坐标
+        rpc(type||"sendElectronClick",{
+            win_id:1,
+            x,y
+        }).finally(()=>{
+            //location.reload()
+        })
+    }
+    const onMouseMoveImage = (e)=>{
+        e.preventDefault();
+        // 获取鼠标相对于图片的坐标
+        var x = parseInt(e.clientX + document.querySelector("#screen").scrollLeft) -64;
+        var y = parseInt(e.clientY+ document.querySelector("#screen").scrollTop) -64;
+        document.querySelector("#position").textContent= `x::${y},y:${y}`
+    }
+
     return (
         <div className="flex flex-col h-full">
-            {/* Toolbar */}
-            <div className="p-2 border-b border-border flex gap-2 items-center bg-card">
-                <button className="btn btn-icon" onClick={onBack} title="Back">
-                    <IconArrowLeft />
-                </button>
-                <div className="flex-1 flex gap-2">
-                    <input
-                        style={{ width: "600px" }}
-                        className="input flex-1 font-mono text-sm"
-                        value={navUrl}
-                        onChange={e => setNavUrl(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleNavigate()}
-                    />
-                    <button className="btn" onClick={handleNavigate}>Go</button>
-                </div>
-                <div className="w-px h-6 bg-border mx-2"></div>
-                <button className="btn btn-sm" onClick={async () => {
-                    await rpc('showWindow', { win_id: windowId });
-                }} title="Active Window">
-                    Active
-                </button>
-                <button className="btn btn-sm" onClick={async () => {
-                    await rpc('closeWindow', { win_id: windowId });
-                }} title="Close Window">
-                    Close
-                </button>
-                <button className="btn btn-sm" onClick={async () => {
-                    await rpc('hideWindow', { win_id: windowId });
-                }} title="Hide Window">
-                    Hide
-                </button>
-                <button className="btn btn-icon" onClick={handleReload} title="Reload Page">
-                    <IconRefresh />
-                </button>
-                <button className="btn btn-sm" onClick={async () => {
-                    await rpc('executeJavaScript', { win_id: windowId, code: 'location.reload()' });
-                }} title="Reload via JavaScript">
-                    JS Reload
-                </button>
-            </div>
-            <View relative w100p h="calc(100vh - 134px)">
-                <div className="relative flex-1 h-full">
-                    <div className="absolute inset-0 right-[300px] flex items-center justify-center p-3 bg-black">
-                        <div className="absolute top-0 left-0 right-0 px-3 py-2 bg-black border-b border-gray-700">
-                            <div className="flex justify-between items-center">
-                                <h3 className="font-bold text-gray-400 text-sm uppercase tracking-wide">Live Preview</h3>
-                                <div className="flex gap-2 items-center">
-                                    <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
-                                        <input type="checkbox" checked={isAutoRefresh} onChange={e => setIsAutoRefresh(e.target.checked)} />
-                                        Auto-Refresh
-                                    </label>
-                                    <button className="btn btn-sm btn-icon" onClick={refreshScreenshot}>
-                                        <IconCamera />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="absolute inset-3 rounded-lg overflow-hidden bg-gray-900 border border-gray-700">
-                            <img
-                                src={screenshotUrl || ''}
-                                alt="Window Screenshot"
-                                className="preview-img w-full h-full"
-                                style={{
-                                    maxWidth: '100%',
-                                    maxHeight: '100%',
-                                    height: 'auto',
-                                    objectFit: 'contain'
-                                }}
+            <View w100vw h100vh  xx0 yy0 fixed>
+                <View abs xx0 top0 h={64} rowVCenter>
+                    <div className="p-2 border-b border-border flex gap-2 items-center bg-card">
+                        <button className="btn btn-icon" onClick={onBack} title="Back">
+                            <IconArrowLeft />
+                        </button>
+                        <div className="flex-1 flex gap-2">
+                            <input
+                                style={{ width: "600px" }}
+                                className="input flex-1 font-mono text-sm"
+                                value={navUrl}
+                                onChange={e => setNavUrl(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleNavigate()}
                             />
+                            <button className="btn" onClick={handleNavigate}>Go</button>
                         </div>
+
                     </div>
-                    <div className="absolute inset-y-0 right-0 w-[300px] bg-gray-900 p-3">
-                        <button onClick={removeLogin} className="btn btn-sm w-full">Remove Login</button>
-                    </div>
-                </div>
-            </View>
-            <div className="flex flex-1 overflow-hidden" style={{ display: "none" }} >
-
-                {/* Left: Visual - Fixed Width */}
-                <div className="flex-shrink-0 p-4 bg-root flex flex-col gap-4 scroll-y" style={{
-
-                    borderRight: '1px solid var(--border)',
-                    width: "600px"
-                }}>
-
-                    <div className="flex-1 flex items-center justify-center bg-black rounded border border-border overflow-hidden">
-                        <img
-                            src={screenshotUrl || ''}
-                            alt="Window Screenshot"
-                            className="preview-img"
-                            style={{
-                                width: '800px',
-                                maxWidth: '100%',
-                                maxHeight: '100%',
-                                height: 'auto',
-                                objectFit: 'contain'
+                </View>
+                <View absFull top={64} right={320} overflowXAuto overflowYAuto id={"screen"}>
+                    {
+                        screenshotUrl && <img
+                            onMouseMove={((e)=>onMouseMoveImage(e))}
+                            onClick={(e)=>{
+                                onClickImage(e,"sendElectronClick")
                             }}
-                        />
-                    </div>
-                </div>
+                            src={screenshotUrl} alt=""/>
+                    }
+                    {
+                        !screenshotUrl && <View wh100p center>Loading...</View>
+                    }
 
-                {/* Right: Tools Panel - Flexible */}
-                <div style={{ width: "calc(100vw - 600px)" }} className="flex-1 min-w-0 bg-card flex flex-col border-l border-border">
-                    {/* Tabs */}
-                    <div className="flex border-b border-border bg-bg-root" >
-                        <div
-                            className={`tab-btn ${activeTab === 'console' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('console')}
-                        >
-                            Console
-                        </div>
-                        <div
-                            className={`tab-btn ${activeTab === 'network' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('network')}
-                        >
-                            Network
-                        </div>
-                    </div>
+                </View>
+                <View abs top={64} right0 bottom0 w={320}  >
+                    <View rowVCenter mb12>
+                        <View id={"bound"}></View>
+                    </View>
+                    <View rowVCenter mb12>
+                        <View id={"position"}></View>
+                    </View>
+                    <View rowVCenter jStart>
+                        <button className="btn btn-sm" onClick={async () => {
+                            await rpc('showWindow', { win_id: windowId });
+                        }} title="Active Window">
+                            Active
+                        </button>
+                        <button className="btn btn-sm" onClick={async () => {
+                            if(!confirm("close?")){
+                                return;
+                            }
+                            await rpc('closeWindow', { win_id: windowId });
+                        }} title="Close Window">
+                            Close
+                        </button>
+                        <button className="btn btn-sm" onClick={async () => {
+                            await rpc('hideWindow', { win_id: windowId });
+                        }} title="Hide Window">
+                            Hide
+                        </button>
+                        {/*<button className="btn btn-icon" onClick={handleReload} title="Reload Page">*/}
+                        {/*    <IconRefresh />*/}
+                        {/*</button>*/}
+                        <button className="btn btn-sm" onClick={async () => {
+                            await rpc('executeJavaScript', { win_id: windowId, code: 'location.reload()' });
+                        }} title="Reload via JavaScript">
+                            Reload
+                        </button>
+                    </View>
+                </View>
 
-                    <div className="flex-1 overflow-hidden flex flex-col">
-                        {activeTab === 'console' ? (
-                            <div className="p-4 flex flex-col h-full gap-4 scroll-y">
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h3 className="font-bold text-sm">Execute JavaScript</h3>
-                                        <button className="btn btn-primary btn-sm flex items-center gap-1" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={handleEval}>
-                                            <IconPlay /> Run
-                                        </button>
-                                    </div>
-                                    <textarea
-                                        className="code-editor"
-                                        value={jsCode}
-                                        onChange={e => setJsCode(e.target.value)}
-                                        spellCheck={false}
-                                    />
-                                </div>
-
-                                <div className="flex-1 flex flex-col min-h-0">
-                                    <h3 className="font-bold text-sm mb-2">Output</h3>
-                                    <div className="flex-1 bg-code-bg border border-border p-2 rounded overflow-auto font-mono text-xs text-success whitespace-pre-wrap">
-                                        {evalResult || <span className="text-secondary opacity-50">// Execution results will appear here...</span>}
-                                    </div>
-                                </div>
-
-                                <div className="p-3 border border-border rounded bg-root text-xs text-secondary mt-auto">
-                                    <div className="flex justify-between mb-1">
-                                        <span>Window ID:</span>
-                                        <span className="font-mono text-white">{windowId}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span>Initial URL:</span>
-                                        <span className="font-mono text-white truncate max-w-[200px]" title={initialUrl}>{initialUrl}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col h-full">
-                                <div className="p-2 border-b border-border bg-hover flex gap-2">
-                                    <input
-                                        className="input flex-1 py-1 text-xs"
-                                        placeholder="Filter URLs..."
-                                        value={urlFilter}
-                                        onChange={e => setUrlFilter(e.target.value)}
-                                    />
-                                    <button className="btn btn-sm btn-icon" onClick={async () => {
-                                        try {
-
-                                            await rpc<NetworkLog[]>('clearRequests', {});
-                                        } catch (e) {
-                                        } finally {
-                                            setRequests([])
-                                        }
-                                    }} title="Clear Log">
-                                        <IconTrash />
-                                    </button>
-                                </div>
-                                <div className="flex-1 overflow-auto">
-                                    {requests.length === 0 ? (
-                                        <div className="text-center text-secondary text-xs p-8">No requests logged yet</div>
-                                    ) : (
-                                        requests.map(req => (
-                                            <div key={req.id} className="border-b border-border">
-                                                <div
-                                                    className="p-2 hover:bg-hover cursor-pointer flex gap-2 items-center text-xs"
-                                                    onClick={() => setExpandedRequestId(expandedRequestId === req.id ? null : req.id)}
-                                                >
-                                                    <span className={`font-bold w-12 shrink-0 ${getMethodColor(req.method)}`}>{req.method}</span>
-                                                    <span className="flex-1 truncate font-mono opacity-80" title={req.url}>{req.url}</span>
-                                                    <span className="text-secondary shrink-0" style={{ fontSize: '0.65rem' }}>
-                                                        {new Date(req.timestamp).toLocaleTimeString()}
-                                                    </span>
-                                                </div>
-                                                {expandedRequestId === req.id && (
-                                                    <div className="bg-code-bg p-2 text-xs font-mono border-t border-border overflow-auto max-h-48 whitespace-pre-wrap select-all">
-
-                                                        <div className="mb-2 text-secondary">ID: {req.id}</div>
-
-                                                        <div className="mb-2 text-secondary">URL: {req.url}</div>
-
-                                                        {req.requestHeaders && (
-                                                            <div>
-                                                                <div className="font-bold text-primary mb-1">Request Headers:</div>
-                                                                {Object.entries(req.requestHeaders).map(([k, v]) => (
-                                                                    <div key={k}><span className="text-accent">{k}:</span> {v}</div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            </View>
         </div>
     );
 };

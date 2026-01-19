@@ -99,6 +99,5 @@ app.on('window-all-closed', () => {
   }
 });
 
-
 // Export for testing
 module.exports = { appManager, expressServer };

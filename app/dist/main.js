@@ -11474,6 +11474,7 @@ var require_window_manager = __commonJS({
         this.requestIndex = 0;
         this.windowStates = {};
         this.isShuttingDown = false;
+        this.winIdRemapping = /* @__PURE__ */ new Map();
         this.autoSaveInterval = setInterval(() => {
           this.saveWindowStates();
         }, 5e3);
@@ -11740,7 +11741,7 @@ var require_window_manager = __commonJS({
             const state = savedStates[winId];
             if (state && state.accountIndex !== void 0 && state.url) {
               console.log(`Restoring window ${winId}: ${state.url}`);
-              await this.createWindow(
+              const win = await this.createWindow(
                 state.accountIndex,
                 state.url,
                 state.bounds || {},
@@ -11753,6 +11754,11 @@ var require_window_manager = __commonJS({
                   showWin: true
                 }
               );
+              if (win) {
+                const newWinId = win.id;
+                this.winIdRemapping.set(parseInt(winId), newWinId);
+                console.log(`Mapped old ID ${winId} -> new ID ${newWinId}`);
+              }
             }
           }
         } catch (error) {
@@ -39176,10 +39182,14 @@ var require_screenshot_cache_service = __commonJS({
             workerData: { workerId: i }
           });
           worker.on("message", (result) => {
+            console.log(`[ScreenshotCache] Worker ${i} message:`, result);
             this.handleWorkerMessage(result);
           });
           worker.on("error", (error) => {
             console.error(`[ScreenshotCache] Worker ${i} error:`, error);
+          });
+          worker.on("messageerror", (error) => {
+            console.error(`[ScreenshotCache] Worker ${i} messageerror:`, error);
           });
           worker.on("exit", (code) => {
             if (code !== 0) {
@@ -39231,13 +39241,17 @@ var require_screenshot_cache_service = __commonJS({
             }
           });
         });
+        console.log(`[ScreenshotCache] Scheduling ${tasks.length} tasks (system + windows)`);
         const promises = tasks.map(async (task, index) => {
           try {
             let buffer;
             if (task.type === "system") {
               buffer = await this.captureSystemLive();
+              console.log(`[ScreenshotCache] Captured system screenshot, buffer size: ${buffer.length}`);
             } else if (task.type === "window") {
+              console.log(`[ScreenshotCache] Capturing window ${task.winId}...`);
               buffer = await this.captureWindowLive(task.winId);
+              console.log(`[ScreenshotCache] Captured window ${task.winId}, buffer size: ${buffer.length}`);
             }
             const workerIndex = index % this.workerCount;
             if (this.workers[workerIndex]) {
@@ -39246,6 +39260,9 @@ var require_screenshot_cache_service = __commonJS({
                 ...task,
                 workerId: workerIndex
               });
+              console.log(`[ScreenshotCache] Sent task to worker ${workerIndex}: ${task.type} ${task.winId || ""}`);
+            } else {
+              console.error(`[ScreenshotCache] Worker ${workerIndex} not available`);
             }
           } catch (error) {
             console.error(`[ScreenshotCache] Capture failed for ${task.type} ${task.winId || ""}:`, error);
@@ -39300,6 +39317,7 @@ var require_screenshot_cache_service = __commonJS({
        */
       async captureSystemLive() {
         try {
+          const { desktopCapturer } = require("electron");
           const sources = await desktopCapturer.getSources({
             types: ["screen"],
             thumbnailSize: { width: 1920, height: 1080 }
@@ -39341,7 +39359,9 @@ var require_screenshot_cache_service = __commonJS({
       parentPort.on("message", async (task) => {
         try {
           const { buffer, cacheFile, type, winId, workerId } = task;
+          console.log(`[ScreenshotCache-Worker ${workerId}] Processing task:`, { type, winId, cacheFile, bufferSize: buffer ? buffer.length : 0 });
           await fs4.writeFile(cacheFile, buffer);
+          console.log(`[ScreenshotCache-Worker ${workerId}] Successfully wrote ${buffer.length} bytes to ${cacheFile}`);
           parentPort.postMessage({
             success: true,
             type,
@@ -39350,6 +39370,7 @@ var require_screenshot_cache_service = __commonJS({
             workerId
           });
         } catch (error) {
+          console.error(`[ScreenshotCache-Worker ${task.workerId}] Error:`, error);
           parentPort.postMessage({
             success: false,
             error: error.message,
