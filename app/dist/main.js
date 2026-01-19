@@ -76050,9 +76050,19 @@ if (!fs2.existsSync(logDir)) {
   fs2.mkdirSync(logDir, { recursive: true });
 }
 var logFile = path3.join(logDir, "app.log");
+var errorLogFile = path3.join(logDir, "error.log");
 var logStream = fs2.createWriteStream(logFile, { flags: "a" });
-process.stdout.pipe(logStream);
-process.stderr.pipe(logStream);
+var errorLogStream = fs2.createWriteStream(errorLogFile, { flags: "a" });
+var originalStdoutWrite = process.stdout.write;
+process.stdout.write = function(chunk, encoding, callback) {
+  logStream.write(chunk, encoding);
+  return originalStdoutWrite.call(this, chunk, encoding, callback);
+};
+var originalStderrWrite = process.stderr.write;
+process.stderr.write = function(chunk, encoding, callback) {
+  errorLogStream.write(chunk, encoding);
+  return originalStderrWrite.call(this, chunk, encoding, callback);
+};
 var appManager = require_app_manager();
 var winManager = require_window_manager();
 var expressServer = require_express_server();
