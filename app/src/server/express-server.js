@@ -43,6 +43,7 @@ class ExpressServer {
       const crypto = require('crypto');
       const token = crypto.randomBytes(32).toString('hex');
 
+
       // Save to file
       fs.writeFileSync(tokenPath, token, 'utf8');
       return token;
