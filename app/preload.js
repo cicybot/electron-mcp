@@ -7,10 +7,10 @@ let killCmd;
 let sleepCmd;
 if (platform === 'win32') {
   killCmd = 'taskkill /f /im electron.exe >nul 2>&1 || true';
-  sleepCmd = 'timeout /t 2 /nobreak >nul';
+  sleepCmd = 'timeout /t 1 /nobreak >nul';
 } else if (platform === 'darwin' || platform === 'linux') {
   killCmd = platform === 'darwin' ? 'pkill -f Electron || true' : 'pkill -f electron || true';
-  sleepCmd = 'sleep 2';
+  sleepCmd = 'sleep 1';
 } else {
   killCmd = 'echo "Unsupported platform"';
   sleepCmd = 'echo "No sleep"';
