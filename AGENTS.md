@@ -10,12 +10,15 @@ This file contains guidelines and commands for coding agents working in this Ele
 - `cd app && npm run hot-reload` - Start with hot reloading enabled
 - `cd app && npm run build` - Build using esbuild
 - `cd app && npm run prod` - Run production build
+- `cd app && npm run format` - Format code with Prettier
+- `cd app && npm run format:check` - Check code formatting
 
 ### React Frontend (render/)
 - `cd render && npm run dev` - Start Vite dev server with hot reload
 - `cd render && npm run build` - Build for production with TypeScript compilation
 - `cd render && npm run lint` - Run ESLint
 - `cd render && npm run preview` - Preview production build
+- `cd render && npm run format` - Format code with Prettier
 
 ### Testing
 - `cd app && npm test` - Run all Jest tests
@@ -53,49 +56,28 @@ render/                       # React renderer process (TypeScript)
 - **Singleton pattern** - Managers exported as instances: `module.exports = new ClassName()`
 - **Class-based architecture** - Use ES6 classes with constructor patterns
 - **Async/await** - All asynchronous operations must use async/await
+- **Prettier configured** - Use .prettierrc for formatting (semi, es5 trailing commas, 100 width)
 
 ### Frontend (TypeScript/React)
 - **ES modules** - Use `import`/`export` syntax
 - **Functional components** - Prefer React functional components with hooks
 - **TypeScript strict** - Use strict TypeScript configuration
 - **Component naming** - PascalCase for components, camelCase for hooks/utilities
+- **ESLint configured** - Run `npm run lint` to check code quality
 
 ### Naming Conventions
 - **Variables and functions:** `camelCase`
 - **Classes:** `PascalCase`
-- **Files:** `kebab-case.js` (backend), `PascalCase.tsx` (frontend), `snake_case.py` (Python)
+- **Files:** `kebab-case.js` (backend), `PascalCase.tsx` (frontend)
 - **Constants:** `UPPER_SNAKE_CASE`
 - **Private methods:** Prefix with `_` (e.g., `_privateMethod()`)
 - **React hooks:** Prefix with `use` (e.g., `useCustomHook`)
 
 ### Import/Export Patterns
 
-**Backend (CommonJS):**
-```javascript
-// Import
-const SomeService = require('../services/some-service');
-const { extractFunction } = require('../utils/helpers');
+**Backend (CommonJS):** Use `require()` and `module.exports`. Export managers as singleton instances.
 
-// Export (singleton pattern)
-class SomeManager {
-  constructor() {
-    // initialization
-  }
-}
-module.exports = new SomeManager();
-```
-
-**Frontend (ES modules):**
-```typescript
-// Import
-import React from 'react';
-import { SomeService } from '../services/some-service';
-import type { UserType } from '../types';
-
-// Export
-export const MyComponent: React.FC = () => { /* ... */ };
-export default MyComponent;
-```
+**Frontend (ES modules):** Use `import`/`export` syntax with TypeScript types and React functional components.
 
 ### Error Handling
 - **Always use try-catch blocks** for async operations
@@ -103,70 +85,11 @@ export default MyComponent;
 - **Log errors appropriately** - use console.error for debugging
 - **Graceful degradation** - handle failures without crashing the app
 
-```javascript
-try {
-  const result = await someOperation();
-  return result;
-} catch (error) {
-  console.error('Operation failed:', error.message);
-  throw new Error(`Failed to complete operation: ${error.message}`);
-}
-```
-
-### TypeScript Guidelines
+### TypeScript & React Guidelines
 - **Strict mode enabled** - All TypeScript files must pass strict checks
-- **Interface definitions** - Use interfaces for object shapes, types for unions
-- **Generic constraints** - Use generics for reusable components/utilities
-- **Type assertions** - Avoid `as` casts; prefer proper typing
-
-```typescript
-// Good: Proper interface definition
-interface User {
-  id: number;
-  name: string;
-  email?: string;
-}
-
-// Good: Generic component
-interface Props<T> {
-  data: T;
-  onSelect: (item: T) => void;
-}
-```
-
-### React Patterns
-- **Hooks over classes** - Use functional components with hooks
+- **Functional components** - Prefer React functional components with hooks
 - **Custom hooks** - Extract reusable logic into custom hooks
-- **Context for state** - Use React Context for app-wide state
-- **Memoization** - Use `React.memo`, `useMemo`, `useCallback` for performance
-
-```typescript
-// Custom hook example
-const useWindowState = (windowId: string) => {
-  const [isOpen, setIsOpen] = useState(false);
-  // ... hook logic
-  return { isOpen, toggle: () => setIsOpen(!isOpen) };
-};
-```
-
-### Documentation
 - **JSDoc comments** required for all public methods and classes
-- **TSDoc for TypeScript** - Use TSDoc syntax in TypeScript files
-- **Document parameters** and return types
-- **Include usage examples** for complex methods
-
-```javascript
-/**
- * Performs screenshot capture on specified window
- * @param {string} windowId - Window identifier
- * @param {Object} options - Screenshot options
- * @param {string} options.format - Image format ('png', 'jpeg')
- * @returns {Promise<Buffer>} Screenshot image buffer
- */
-async function captureScreenshot(windowId: string, options: ScreenshotOptions = {}): Promise<Buffer> {
-  // implementation
-}
-```
 
 ## Architecture Guidelines
 
@@ -184,12 +107,6 @@ When creating new MCP tools:
 3. **Use account manager** - get account context via `accountManager.getAccount(id)`
 4. **Return structured data** - follow existing response patterns
 5. **Handle errors gracefully** - return error objects, don't throw
-
-### Database Patterns
-- **Use MySQL2** for database operations
-- **Connection pooling** - manage connections efficiently
-- **Parameterized queries** - prevent SQL injection
-- **Transaction support** - use transactions for multi-step operations
 
 ### Testing Guidelines
 - **Unit tests** for utility functions
@@ -214,61 +131,28 @@ describe('SomeService', () => {
 });
 ```
 
-## Development Workflow
-
-### Getting Started
+### Development Workflow
 1. `npm install` in both `app/` and `render/` directories
 2. `cd render && npm run dev` - Start frontend dev server
 3. `cd app && npm run dev` - Start Electron backend
-4. Open Electron DevTools for debugging
+4. Follow code style guidelines and run lint/test commands before committing
 
-### Making Changes
-1. **Create feature branch** for significant changes
-2. **Write tests first** for new functionality
-3. **Follow code style** guidelines above
-4. **Run lint/typecheck** - `npm run lint` (frontend), `npm test` (backend)
-5. **Build and test** both frontend and backend
-6. **Test manually** in Electron environment
+## Changelog Workflow
 
-### Hot Reload Development
-- Frontend: Vite provides automatic hot reload
-- Backend: Use `npm run hot-reload` for development
-- Changes to core files may require full restart
+### 📝 **Changelog Management**
+- **Directories**: `app/changelog/` and `render/changelog/`
+- **File Format**: Each change gets its own `.md` file with timestamp
+- **Content**: Include what was changed, why, and any breaking changes
 
-## Common Pitfalls
+### 🔄 **Code Change Process**
+1. **When you request code changes/fixes**: Create changelog entry automatically
+2. **File naming**: `YYYY-MM-DD_HH-MM-SS_description.md`
+3. **When you say "提交"**: Commit all changes to `origin mcp` branch using changelog entries
 
-### Avoid These
-- **Mixing Node.js and browser code** - know your execution context
-- **Blocking the main thread** - keep operations async
-- **Memory leaks** - properly clean up windows and listeners
-- **Global state** - use managers and proper encapsulation
-- **Hardcoded paths** - use path.join() for cross-platform compatibility
-
-### Security Considerations
-- **Validate all inputs** - especially from external sources
-- **Sanitize file paths** - prevent directory traversal
-- **Handle secrets properly** - never log sensitive data
-- **Use secure defaults** - disable dangerous features by default
-
-## Framework-Specific Notes
-
-### Electron
-- **Main process** vs **renderer process** separation
-- **IPC communication** for cross-process messaging
-- **Security** with context isolation enabled
-- **Native APIs** for system integration
-
-### React/TypeScript
-- **Vite** for fast development and building
-- **ESLint** with React and TypeScript rules
-- **Strict TypeScript** configuration
-- **React hooks** for state management
-
-### Express.js/MCP
-- **Middleware pattern** for request processing
-- **Zod schemas** for type safety and validation
-- **SSE for real-time** communication
-- **Tool-based architecture** with validation
+### 📊 **Watch Script**
+- **Command**: `npm run watch-changelog` watches `app/changelog/*.md` changes
+- **Action**: Runs `npm start` when changelog files are modified
+- **Purpose**: Auto-restart development server on changelog updates
 
 ---
 

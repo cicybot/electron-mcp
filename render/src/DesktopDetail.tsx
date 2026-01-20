@@ -5,7 +5,7 @@ import { IconArrowLeft } from './Icons';
 import View from './View';
 
 export const DesktopDetail = ({  onBack }: { onBack: () => void }) => {
-    const { rpc, rpcBaseUrl } = useRpc();
+    const { rpc, rpcBaseUrl, rpcToken } = useRpc();
 
     useEffect(() => {
         document.title = "Desktop";
@@ -30,14 +30,18 @@ export const DesktopDetail = ({  onBack }: { onBack: () => void }) => {
         };
 
         fetchScreenSize();
-    }, [rpc]);
+    }, [rpc, rpcToken]);
 
     // Auto-fetch screenshot as blob URL
     useEffect(() => {
         const fetchScreenshot = async () => {
             try {
                 const url = (rpcBaseUrl ? `${rpcBaseUrl}/displayScreenshot` : '/displayScreenshot') + `?t=${Date.now()}`;
-                const response = await fetch(url);
+                const headers: Record<string, string> = {};
+                if (rpcToken) {
+                    headers['Authorization'] = `Bearer ${rpcToken}`;
+                }
+                const response = await fetch(url, { headers });
                 if (response.ok) {
                     const arrayBuffer = await response.arrayBuffer();
                     const blob = new Blob([arrayBuffer], { type: 'image/png' });
@@ -56,7 +60,7 @@ export const DesktopDetail = ({  onBack }: { onBack: () => void }) => {
         const interval = setInterval(fetchScreenshot, 1000);
 
         return () => clearInterval(interval);
-    }, [ rpcBaseUrl]);
+    }, [rpcBaseUrl, rpcToken]);
 
     const onClickImage = (e,type)=>{
         e.preventDefault();

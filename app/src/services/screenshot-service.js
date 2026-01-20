@@ -19,9 +19,10 @@ class ScreenshotService {
     }
 
     try {
+      // Capture at full resolution first
       const image = await wc.capturePage();
 
-      // Apply default scaling (50%)
+      // Apply scaling (default to 50% for backwards compatibility)
       const scaleFactor = options.scaleFactor || 0.5;
       const scaled = image.resize({
         width: Math.floor(image.getSize().width * scaleFactor),

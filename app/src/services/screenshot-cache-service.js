@@ -250,14 +250,22 @@ stop() {
         throw new Error('Window not found');
       }
 
+      // Capture the webContents at full resolution (viewport size)
       const image = await win.webContents.capturePage();
-      
+
+      // Log the captured size for debugging
+      const capturedSize = image.getSize();
+      const bounds = win.getBounds();
+      console.log(`[Screenshot] Window ${winId} bounds: ${bounds.width}x${bounds.height}, captured: ${capturedSize.width}x${capturedSize.height}`);
+
       // Scale to half size for window screenshots
       const scaleFactor = 0.5;
       const scaled = image.resize({
-        width: Math.floor(image.getSize().width * scaleFactor),
-        height: Math.floor(image.getSize().height * scaleFactor),
+        width: Math.floor(capturedSize.width * scaleFactor),
+        height: Math.floor(capturedSize.height * scaleFactor),
       });
+
+      console.log(`[Screenshot] Scaled to: ${scaled.getSize().width}x${scaled.getSize().height}`);
 
       return scaled.toPNG(); // PNG format with compression
     } catch (error) {

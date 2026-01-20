@@ -80,10 +80,18 @@ class ExpressServer {
     }
   }
 
-   /**
-    * Set up Express middleware
-    */
+/**
+     * Set up Express middleware
+     */
    setupMiddleware() {
+     // Enable CORS for all origins with preflight support
+     this.app.use(cors({
+       origin: '*',
+       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+       allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Token', 'token'],
+       credentials: true
+     }));
+
      // API authentication middleware
      this.app.use(this.authMiddleware.bind(this));
 
@@ -95,8 +103,6 @@ class ExpressServer {
         }
         next();
       });
-     // Enable CORS for all origins
-     this.app.use(cors({ origin: '*' }));
 
      // Parse JSON bodies
      this.app.use(express.json({ limit: '50mb' }));

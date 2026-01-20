@@ -6,6 +6,7 @@ interface RpcContextType {
     rpc: <T = unknown>(method: string, params?: Record<string, unknown>) => Promise<T>;
     rpcUrl: string;       // The full URL e.g. http://.../rpc
     rpcBaseUrl: string;   // The origin e.g. http://...
+    rpcToken: string;     // The auth token for direct requests
     availableUrls: string[];
     addUrl: (url: string) => void;
     removeUrl: (url: string) => void;
@@ -98,6 +99,17 @@ export const RpcProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (currentUrl === oldUrl) setCurrentUrl(newUrl);
     };
 
+    // Extract token from URL for use in direct requests
+    const getTokenFromUrl = (url: string): string | null => {
+        const tokenIndex = url.indexOf('?token=');
+        if (tokenIndex !== -1) {
+            return url.substring(tokenIndex + 7); // 7 = length of '?token='
+        }
+        return null;
+    };
+
+    const rpcToken = getTokenFromUrl(currentUrl);
+
     const rpc = useCallback(async <T = unknown>(method: string, params: Record<string, unknown> = {}): Promise<T> => {
         let response;
         try {
@@ -155,7 +167,7 @@ export const RpcProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : '';
 
     return (
-        <RpcContext.Provider value={{ rpc, rpcUrl: currentUrl, rpcBaseUrl, availableUrls, addUrl, removeUrl, updateUrl, setCurrentUrl }}>
+        <RpcContext.Provider value={{ rpc, rpcUrl: currentUrl, rpcBaseUrl, rpcToken: rpcToken || '', availableUrls, addUrl, removeUrl, updateUrl, setCurrentUrl }}>
             {children}
         </RpcContext.Provider>
     );

@@ -6,7 +6,7 @@ import { IconArrowLeft } from './Icons';
 import View from './View';
 
 export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: number, initialUrl: string, onBack: () => void }) => {
-    const { rpc, rpcBaseUrl } = useRpc();
+    const { rpc, rpcBaseUrl, rpcToken } = useRpc();
     const [currentUrl, setCurrentUrl] = useState(initialUrl);
 
     // Set initial title
@@ -109,7 +109,11 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
         const fetchScreenshot = async () => {
             try {
                 const url = (rpcBaseUrl ? `${rpcBaseUrl}/windowScreenshot` : '/windowScreenshot') + `?id=${windowId}&t=${Date.now()}`;
-                const response = await fetch(url);
+                const headers: Record<string, string> = {};
+                if (rpcToken) {
+                    headers['Authorization'] = `Bearer ${rpcToken}`;
+                }
+                const response = await fetch(url, { headers });
                 if (response.ok) {
                     const arrayBuffer = await response.arrayBuffer();
                     const blob = new Blob([arrayBuffer], { type: 'image/png' });
@@ -141,7 +145,7 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
         const interval = setInterval(fetchScreenshot, 1000);
 
         return () => clearInterval(interval);
-    }, [windowId, rpcBaseUrl, rpc]);
+    }, [windowId, rpcBaseUrl, rpc, rpcToken]);
 
     const onClickImage = (e,type)=>{
         e.preventDefault();
