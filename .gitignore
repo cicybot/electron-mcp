@@ -6,4 +6,5 @@ node_modules
 .vite/
 run/
 *.js.map
-app/dist/*
+app/dist/
+render/dist/
