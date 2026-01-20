@@ -37,14 +37,8 @@ class ScreenshotService {
         height: contentSize.height
       });
 
-      // Apply scaling (default to 50% for backwards compatibility)
-      const scaleFactor = options.scaleFactor || 0.5;
-      const scaled = image.resize({
-        width: Math.floor(image.getSize().width * scaleFactor),
-        height: Math.floor(image.getSize().height * scaleFactor),
-      });
-
-      return scaled;
+      // Return full resolution image (no scaling for window screenshots)
+      return image;
     } catch (error) {
       console.error('[ScreenshotService] Capture failed:', error);
       throw new Error(`Screenshot capture failed: ${error.message}`);

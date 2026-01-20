@@ -273,16 +273,10 @@ stop() {
       const bounds = win.getBounds();
       console.log(`[Screenshot] Window ${winId} bounds: ${bounds.width}x${bounds.height}, content: ${contentSize.width}x${contentSize.height}, captured: ${capturedSize.width}x${capturedSize.height}`);
 
-      // Scale to half size for window screenshots
-      const scaleFactor = 0.5;
-      const scaled = image.resize({
-        width: Math.floor(capturedSize.width * scaleFactor),
-        height: Math.floor(capturedSize.height * scaleFactor),
-      });
+      // Return full resolution image (no scaling)
+      console.log(`[Screenshot] Returning full resolution: ${capturedSize.width}x${capturedSize.height}`);
 
-      console.log(`[Screenshot] Scaled to: ${scaled.getSize().width}x${scaled.getSize().height}`);
-
-      return scaled.toPNG(); // PNG format with compression
+      return image.toPNG(); // PNG format with compression
     } catch (error) {
       console.error(`[ScreenshotCache] Live window ${winId} capture failed:`, error);
       throw error;
