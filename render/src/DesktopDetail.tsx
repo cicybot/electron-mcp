@@ -14,49 +14,49 @@ export const DesktopDetail = ({  onBack }: { onBack: () => void }) => {
     const [screenshotUrl, setScreenshotUrl] = useState<string>('');
     const [isAutoRefresh, setIsAutoRefresh] = useState(false);
 
-    const refreshScreenshot = () => setScreenshotUrl('');
+    const fetchScreenSize = async () => {
+        try {
+            const screenInfo = await rpc<{ width: number; height: number }>('getDisplayScreenSize');
+            if (screenInfo) {
+                const sizeElement = document.querySelector("#windowSize");
+                if (sizeElement) {
+                    sizeElement.textContent = `${screenInfo.width}x${screenInfo.height}`;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to get screen size:', e);
+        }
+    };
 
     // Get screen size on mount
     useEffect(() => {
-        const fetchScreenSize = async () => {
-            try {
-                const screenInfo = await rpc<{ width: number; height: number }>('getDisplayScreenSize');
-                if (screenInfo) {
-                    const sizeElement = document.querySelector("#windowSize");
-                    if (sizeElement) {
-                        sizeElement.textContent = `${screenInfo.width}x${screenInfo.height}`;
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to get screen size:', e);
-            }
-        };
-
+        fetchScreenshot()
         fetchScreenSize();
     }, [rpc, rpcToken]);
+
+
+    const fetchScreenshot = async () => {
+        try {
+            const url = (rpcBaseUrl ? `${rpcBaseUrl}/displayScreenshot` : '/displayScreenshot') + `?t=${Date.now()}`;
+            const headers: Record<string, string> = {};
+            if (rpcToken) {
+                headers['Authorization'] = `Bearer ${rpcToken}`;
+            }
+            const response = await fetch(url, { headers });
+            if (response.ok) {
+                const arrayBuffer = await response.arrayBuffer();
+                const blob = new Blob([arrayBuffer], { type: 'image/png' });
+                const blobUrl = URL.createObjectURL(blob);
+                setScreenshotUrl(blobUrl);
+            }
+        } catch (error) {
+            console.error('Failed to fetch screenshot:', error);
+        }
+    };
 
     // Auto-fetch screenshot as blob URL
     useEffect(() => {
         let timeoutId: NodeJS.Timeout | null = null;
-
-        const fetchScreenshot = async () => {
-            try {
-                const url = (rpcBaseUrl ? `${rpcBaseUrl}/displayScreenshot` : '/displayScreenshot') + `?t=${Date.now()}`;
-                const headers: Record<string, string> = {};
-                if (rpcToken) {
-                    headers['Authorization'] = `Bearer ${rpcToken}`;
-                }
-                const response = await fetch(url, { headers });
-                if (response.ok) {
-                    const arrayBuffer = await response.arrayBuffer();
-                    const blob = new Blob([arrayBuffer], { type: 'image/png' });
-                    const blobUrl = URL.createObjectURL(blob);
-                    setScreenshotUrl(blobUrl);
-                }
-            } catch (error) {
-                console.error('Failed to fetch screenshot:', error);
-            }
-        };
 
         const scheduleNextFetch = () => {
             if (isAutoRefresh) {
@@ -106,7 +106,7 @@ export const DesktopDetail = ({  onBack }: { onBack: () => void }) => {
                             <IconArrowLeft />
                         </button>
                          <div className="flex-1 flex gap-2">
-                             <button className="btn" onClick={refreshScreenshot}>刷新截屏</button>
+                             <button className="btn" onClick={fetchScreenshot}>刷新截屏</button>
                              <button
                                  className={`btn ${isAutoRefresh ? 'btn-success' : 'btn-secondary'}`}
                                  onClick={() => setIsAutoRefresh(!isAutoRefresh)}
