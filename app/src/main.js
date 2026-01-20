@@ -73,7 +73,7 @@ app.whenReady().then(async () => {
   
    if (BrowserWindow.getAllWindows().length === 0) {
      // Could create a default window here if needed
-     winManager.createWindow(0,"http://localhost:3456/",{})
+     winManager.createWindow(0,"https://electron-render.cicy.de5.net/initWindow",{})
    }
   // Handle app activation (macOS)
   app.on('activate', () => {
