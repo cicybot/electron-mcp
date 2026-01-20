@@ -51,8 +51,8 @@ class ScreenshotService {
         height: contentSize.height
       });
 
-      // Return full resolution image (no scaling for window screenshots)
-      return image;
+      // Return full resolution image with JPEG compression
+      return image.toJPEG(85); // JPEG format with 85% quality
     } catch (error) {
       console.error('[ScreenshotService] Capture failed:', error);
       throw new Error(`Screenshot capture failed: ${error.message}`);

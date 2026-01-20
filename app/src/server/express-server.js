@@ -296,8 +296,8 @@ class ExpressServer {
          }
        }
 
-       res.setHeader('Content-Type', 'image/png');
-       res.send(imgBuffer);
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.send(imgBuffer);
      } catch (err) {
        console.error('[screenshot]', err);
        res.status(500).json({ error: err.message });

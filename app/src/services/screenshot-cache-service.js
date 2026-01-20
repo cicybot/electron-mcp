@@ -231,9 +231,9 @@ stop() {
         throw new Error('No screen sources found');
       }
 
-      // Use original size (no resize) but compress
+      // Use original size with JPEG compression for smaller file size
       const image = sources[0].thumbnail;
-      return image.toPNG(); // PNG format with compression
+      return image.toJPEG(85); // JPEG format with 85% quality for better compression
     } catch (error) {
       console.error('[ScreenshotCache] Live system capture failed:', error);
       throw error;
@@ -287,10 +287,10 @@ stop() {
       const bounds = win.getBounds();
       console.log(`[Screenshot] Window ${winId} bounds: ${bounds.width}x${bounds.height}, content: ${contentSize.width}x${contentSize.height}, captured: ${capturedSize.width}x${capturedSize.height}`);
 
-      // Return full resolution image (no scaling)
+      // Return full resolution image with JPEG compression
       console.log(`[Screenshot] Returning full resolution: ${capturedSize.width}x${capturedSize.height}`);
 
-      return image.toPNG(); // PNG format with compression
+      return image.toJPEG(85); // JPEG format with 85% quality for better compression
     } catch (error) {
       console.error(`[ScreenshotCache] Live window ${winId} capture failed:`, error);
       throw error;
