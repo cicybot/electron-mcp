@@ -250,13 +250,28 @@ stop() {
         throw new Error('Window not found');
       }
 
-      // Capture the webContents at full resolution (viewport size)
-      const image = await win.webContents.capturePage();
+      // Get the full page content size (including scrollable area)
+      const contentSize = await win.webContents.executeJavaScript(`
+        ({
+          width: Math.max(document.body.scrollWidth, document.body.offsetWidth, document.documentElement.clientWidth, document.documentElement.scrollWidth, document.documentElement.offsetWidth),
+          height: Math.max(document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight)
+        })
+      `);
+
+      console.log(`[Screenshot] Window ${winId} - Content size: ${contentSize.width}x${contentSize.height}`);
+
+      // Capture the full page content at its actual size
+      const image = await win.webContents.capturePage({
+        x: 0,
+        y: 0,
+        width: contentSize.width,
+        height: contentSize.height
+      });
 
       // Log the captured size for debugging
       const capturedSize = image.getSize();
       const bounds = win.getBounds();
-      console.log(`[Screenshot] Window ${winId} bounds: ${bounds.width}x${bounds.height}, captured: ${capturedSize.width}x${capturedSize.height}`);
+      console.log(`[Screenshot] Window ${winId} bounds: ${bounds.width}x${bounds.height}, content: ${contentSize.width}x${contentSize.height}, captured: ${capturedSize.width}x${capturedSize.height}`);
 
       // Scale to half size for window screenshots
       const scaleFactor = 0.5;

@@ -19,8 +19,23 @@ class ScreenshotService {
     }
 
     try {
-      // Capture at full resolution first
-      const image = await wc.capturePage();
+      // Get the full page content size (including scrollable area)
+      const contentSize = await wc.executeJavaScript(`
+        ({
+          width: Math.max(document.body.scrollWidth, document.body.offsetWidth, document.documentElement.clientWidth, document.documentElement.scrollWidth, document.documentElement.offsetWidth),
+          height: Math.max(document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight)
+        })
+      `);
+
+      console.log(`[ScreenshotService] Content size: ${contentSize.width}x${contentSize.height}`);
+
+      // Capture the full page content at its actual size
+      const image = await wc.capturePage({
+        x: 0,
+        y: 0,
+        width: contentSize.width,
+        height: contentSize.height
+      });
 
       // Apply scaling (default to 50% for backwards compatibility)
       const scaleFactor = options.scaleFactor || 0.5;
