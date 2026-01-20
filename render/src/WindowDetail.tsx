@@ -61,12 +61,10 @@ export const WindowDetail = ({ windowId, initialUrl, onBack }: { windowId: numbe
 
         };
 
-        // Initial fetch
-        tick();
-
-        const interval = setInterval(tick, 1000);
+        // No initial fetch - only poll when auto-refresh is enabled
+        const interval = isAutoRefresh ? setInterval(tick, 1000) : null;
         return () => clearInterval(interval);
-    }, [isAutoRefresh, activeTab, windowId, urlFilter]);
+    }, [isAutoRefresh, activeTab, windowId, urlFilter, rpc]);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleReload = async () => {

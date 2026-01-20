@@ -56,10 +56,7 @@ export const DesktopDetail = ({  onBack }: { onBack: () => void }) => {
             }
         };
 
-        // Initial fetch (only if not auto-refreshing)
-        if (!isAutoRefresh) {
-            fetchScreenshot();
-        }
+        // No initial fetch - user must manually refresh or enable auto-refresh
 
         // Set up interval for auto-refresh only when enabled
         let interval: NodeJS.Timeout | null = null;
