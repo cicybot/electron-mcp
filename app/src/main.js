@@ -47,6 +47,7 @@ process.stderr.write = function(chunk, encoding, callback) {
 // Import modular components
 const appManager = require('./core/app-manager');
 const winManager = require('./core/window-manager');
+const menuManager = require('./core/menu-manager');
 const expressServer = require('./server/express-server');
 
 // Initialize context menu
@@ -68,13 +69,16 @@ app.whenReady().then(async () => {
   // Initialize window manager and restore previous session
   await winManager.init();
 
+  // Create application menu
+  menuManager.createMenu();
+
   // Start Express server (includes MCP integration)
   expressServer.start();
   
-   if (BrowserWindow.getAllWindows().length === 0) {
-     // Could create a default window here if needed
-     winManager.createWindow(0,"https://electron-render.cicy.de5.net/initWindow",{})
-   }
+    if (BrowserWindow.getAllWindows().length === 0) {
+      // Could create a default window here if needed
+      winManager.createWindow(0,"https://electron-render.cicy.de5.net",{})
+    }
   // Handle app activation (macOS)
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
