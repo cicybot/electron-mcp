@@ -17,9 +17,8 @@ if(platform === 'linux'){
 app.commandLine.appendSwitch('trace-warnings')
 
 
-app.commandLine.appendSwitch('no-sandbox')
-app.commandLine.appendSwitch('remote-debugging-port', '9221')
-app.commandLine.appendSwitch('host-rules', 'MAP * 127.0.0.1')
+// app.commandLine.appendSwitch('remote-debugging-port', '9221')
+// app.commandLine.appendSwitch('host-rules', 'MAP * 127.0.0.1')
 // Disable hardware acceleration to fix DXGI duplication errors
 app.disableHardwareAcceleration();
 
