@@ -256,6 +256,66 @@ class RPCHandler {
           }
           break;
 
+        case 'sendElectronCtlC':
+          if (wc) {
+            // Send Ctrl+C (Control key + C key) for copy
+            await wc.sendInputEvent({
+              type: 'keyDown',
+              keyCode: 'C',
+              modifiers: ['control']
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'C',
+              modifiers: ['control']
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'Control'
+            });
+          }
+          break;
+
+        case 'sendElectronCtlX':
+          if (wc) {
+            // Send Ctrl+X (Control key + X key) for cut
+            await wc.sendInputEvent({
+              type: 'keyDown',
+              keyCode: 'X',
+              modifiers: ['control']
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'X',
+              modifiers: ['control']
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'Control'
+            });
+          }
+          break;
+
+        case 'sendElectronCtlA':
+          if (wc) {
+            // Send Ctrl+A (Control key + A key) for select all
+            await wc.sendInputEvent({
+              type: 'keyDown',
+              keyCode: 'A',
+              modifiers: ['control']
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'A',
+              modifiers: ['control']
+            });
+            await wc.sendInputEvent({
+              type: 'keyUp',
+              keyCode: 'Control'
+            });
+          }
+          break;
+
         // Cookies
         case 'importCookies':
           if (wc) {
