@@ -20,7 +20,7 @@ class MenuManager {
         label: 'File',
         submenu: [
           {
-            label: 'New Window',
+            label: 'InitWindow',
             accelerator: 'CmdOrCtrl+N',
             click: () => {
               winManager.createWindow(0, 'https://electron-render.cicy.de5.net/initWindow', {});
@@ -74,8 +74,6 @@ class MenuManager {
       {
         label: 'View',
         submenu: [
-          { role: 'reload' },
-          { role: 'forceReload' },
           { role: 'toggleDevTools' },
           { type: 'separator' },
           { role: 'resetZoom' },
