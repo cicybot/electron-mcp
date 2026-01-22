@@ -18,9 +18,20 @@ class ExpressServer {
     this.rpcHandler = require('./rpc-handler');
     this.appManager = require('../core/app-manager');
     this.apiToken = this.loadOrGenerateToken();
+    this.apiTokenDev = this.loadOrDevToken();
 
     // Print token on startup
     console.log(`[API Token] ${this.apiToken}`);
+  }
+
+  loadOrDevToken() {
+    const tokenPath = path.join(os.homedir(), 'electron-mcp', 'token-dev.txt');
+    if (fs.existsSync(tokenPath)) {
+      // Read existing token
+      return fs.readFileSync(tokenPath, 'utf8').trim();
+    }else{
+      return ""
+    }
   }
 
   /**
@@ -156,14 +167,14 @@ class ExpressServer {
        });
      }
 
-     if (token !== this.apiToken) {
+     if (token === this.apiToken || (this.apiTokenDev && token === this.apiTokenDev)) {
+       next();
+     }else{
+       // Token is valid, proceed
        return res.status(403).json({
          error: 'Invalid API token'
        });
      }
-
-     // Token is valid, proceed
-     next();
    }
 
   /**

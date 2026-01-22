@@ -1,4 +1,5 @@
-
+const utils = require("../utils");
+utils.ctl
 function onReady() {
     console.log("_G extension onReady")
     setInterval(() => {
@@ -34,6 +35,63 @@ function onReady() {
             }
         }
     }, 20000)
+    regEvent()
 }
+
+window.__regEvent = false
+
+function regEvent(){
+    if(window.__regEvent){
+        return
+    }
+    window.__regEvent = true
+    document.addEventListener('keydown', async (e) => {
+        const url = location.href
+
+        const api = url.replace("-6090","-3456")
+        const uri = new URL(api)
+        utils.setBaseApi(`${uri.origin}/rpc`)
+        utils.setToken("www")
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'v') {
+            try {
+                const clipboardData = await navigator.clipboard.readText();
+                if (clipboardData) {
+                    //alert(`Clipboard: ${clipboardData}`);
+                    console.log("clipboardData",clipboardData)
+                    await utils.post_rpc({
+                        method:"writeClipboard",
+                        params:{
+                            text:clipboardData,
+                        }
+                    })
+                    console.log("clear clipboardData")
+                    await navigator.clipboard.writeText("");
+                }
+            } catch (err) {
+                console.log(err)
+            }
+
+            await utils.post_rpc({
+                method:"pyautoguiHotkey",
+                params:{
+                    hot:"ctrl",
+                    key:"v",
+                }
+            })
+
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
+            await utils.post_rpc({
+                method:"pyautoguiHotkey",
+                params:{
+                    hot:"ctrl",
+                    key:"c",
+                }
+            })
+        }
+    },true);
+
+}
+
 
 module.exports = {onReady}

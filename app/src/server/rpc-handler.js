@@ -452,6 +452,10 @@ class RPCHandler {
           await this._runPyAutoGUIScript('type', params);
           break;
 
+        case 'pyautoguiHotkey':
+          await this._runPyAutoGUIScript('hotkey', params);
+          break;
+
         case 'pyautoguiPress':
           await this._runPyAutoGUIScript('press', params);
           break;
@@ -484,7 +488,7 @@ class RPCHandler {
           result = await this._runPyAutoGUIScript('screenshot', params);
           break;
 
-case 'pyautoguiWrite':
+        case 'pyautoguiWrite':
           await this._runPyAutoGUIScript('write', params);
           break;
 
