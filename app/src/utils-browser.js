@@ -162,6 +162,171 @@ function regxHTML1(html) {
     return t
 }
 
+//showPrompt
+
+const PROMPT_DIV_ID = '__promptDiv'
+
+function showPromptArea() {
+    let {width,height,top,left} = {}
+    if(!width) width = 600
+    if(!height) height = 180
+    if(!top) top = 50
+    if(!left) left = 50
+    const existing = document.getElementById(PROMPT_DIV_ID)
+    if (existing) existing.remove()
+
+    const div = document.createElement('div')
+    div.id = PROMPT_DIV_ID
+    div.style.cssText = `
+    position: fixed;
+    width: ${width}px;
+    height: ${height}px;
+    top: ${top}px;
+    left: ${left}px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #333;
+    border-radius: 4px;
+    z-index: 2147483647;
+    box-shadow: 0 4px 6px rgba(0,0,0,1);`
+    const handles = ['nw', 'ne', 'sw', 'se']
+    handles.forEach(pos => {
+        const handle = document.createElement('div')
+        handle.className = `resize-handle ${pos}`
+        handle.style.cssText = `
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #333;
+      ${pos.includes('n') ? 'top: -5px;' : 'bottom: -5px;'}
+      ${pos.includes('w') ? 'left: -5px;' : 'right: -5px;'}
+      cursor: ${pos}-resize;
+    `
+        div.appendChild(handle)
+    })
+
+    const textarea = document.createElement('textarea')
+
+    textarea.style.cssText = `
+width: 100%;
+height: 100%;
+    `
+
+    // Add enter key handler
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            const value = textarea.value
+            if (value.trim()) {
+                alert(value)
+                textarea.value = ''
+            }
+        }
+    })
+
+    div.appendChild(textarea)
+
+
+    // Add close button
+    const closeButton = document.createElement('div')
+    closeButton.innerHTML = '×'
+    closeButton.style.cssText = `
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 16px;
+        height: 16px;
+        background: rgba(255, 0, 0, 0.8);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 1;
+        opacity: 1;
+    `
+    closeButton.addEventListener('click', () => {
+        hidePromptArea()
+    })
+    div.appendChild(closeButton)
+
+    document.body.appendChild(div)
+
+    let isDragging = false
+    let isResizing = false
+    let startX, startY, startLeft, startTop, startWidth, startHeight, resizeHandle
+
+    div.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('resize-handle')) {
+            isResizing = true
+            resizeHandle = e.target.className.split(' ')[1]
+            startX = e.clientX
+            startY = e.clientY
+            startWidth = div.offsetWidth
+            startHeight = div.offsetHeight
+            startLeft = div.offsetLeft
+            startTop = div.offsetTop
+            e.preventDefault()
+        } else {
+            isDragging = true
+            startX = e.clientX
+            startY = e.clientY
+            startLeft = div.offsetLeft
+            startTop = div.offsetTop
+            e.preventDefault()
+        }
+    })
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            const newLeft = startLeft + (e.clientX - startX)
+            const newTop = startTop + (e.clientY - startY)
+            div.style.left = `${newLeft}px`
+            div.style.top = `${newTop}px`
+
+        } else if (isResizing) {
+            let newWidth = startWidth
+            let newHeight = startHeight
+            let newLeft = startLeft
+            let newTop = startTop
+
+            if (resizeHandle.includes('e')) {
+                newWidth = startWidth + (e.clientX - startX)
+            }
+            if (resizeHandle.includes('s')) {
+                newHeight = startHeight + (e.clientY - startY)
+            }
+            if (resizeHandle.includes('w')) {
+                newWidth = startWidth - (e.clientX - startX)
+                newLeft = startLeft + (e.clientX - startX)
+            }
+            if (resizeHandle.includes('n')) {
+                newHeight = startHeight - (e.clientY - startY)
+                newTop = startTop + (e.clientY - startY)
+            }
+
+            const finalWidth = Math.max(50, newWidth)
+            const finalHeight = Math.max(50, newHeight)
+            div.style.width = `${finalWidth}px`
+            div.style.height = `${finalHeight}px`
+            div.style.left = `${newLeft}px`
+            div.style.top = `${newTop}px`
+        }
+    })
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false
+        isResizing = false
+    })
+}
+
+function hidePromptArea() {
+    const div = document.getElementById(PROMPT_DIV_ID)
+    if (div) div.remove()
+}
+
 
 const FLOAT_DIV_ID = '__floatDiv'
 
@@ -478,6 +643,8 @@ module.exports = {
     showRect,
     getChatGptChats,
     Storage,
+    showPromptArea,
+    hidePromptArea,
     showFloatDiv,
     hideFloatDiv
 }

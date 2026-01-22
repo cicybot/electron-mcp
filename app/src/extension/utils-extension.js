@@ -1,7 +1,8 @@
 const utils = require("../utils");
+const utilsBrowser = require("../utils-browser")
 
-utils.ctl
 function onReady() {
+    // utilsBrowser.showPromptArea()
     console.log("_G extension onReady")
     setInterval(() => {
         console.debug("loop")
@@ -126,6 +127,5 @@ function regVncEvent(){
     },true);
 
 }
-
 
 module.exports = {onReady}
