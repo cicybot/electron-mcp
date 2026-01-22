@@ -219,10 +219,7 @@ class WindowManager {
         window._G._l("dom-ready")
       }`;
 
-
-      console.log(initScript)
       win.webContents.executeJavaScript(globalCode + `;(()=>{${initScript}})();`)
-
 
       // Update window title with win_id prefix
       this._updateWindowTitle(winId, win);
