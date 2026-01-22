@@ -53,8 +53,7 @@ function regVncEvent(){
         const api = url.replace(vnc_port,"-3456.")
         const uri = new URL(api)
         utils.setBaseApi(`${uri.origin}`)
-        utils.setToken("www")
-
+        utils.setToken(localStorage.getItem("__token"))
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
             if(!localStorage.getItem("__username")){
                 alert("__username is null")
@@ -106,6 +105,16 @@ function regVncEvent(){
                 params:{
                     hot:"ctrl",
                     key:"a",
+                }
+            })
+        }
+
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'x') {
+            await utils.post_rpc({
+                method:"pyautoguiHotkey",
+                params:{
+                    hot:"ctrl",
+                    key:"x",
                 }
             })
         }
