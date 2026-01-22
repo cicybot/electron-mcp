@@ -5,6 +5,35 @@
 
 const { Menu, BrowserWindow } = require('electron');
 const winManager = require('./window-manager');
+const storageManager = require('./storage-manager');
+
+// 递归处理菜单配置，绑定点击事件
+const processMenuItems = (menuItems) => {
+  return menuItems.map(item => {
+    // 如果有子菜单，递归处理
+    if (item.submenu) {
+      return {
+        ...item,
+        submenu: processMenuItems(item.submenu)
+      };
+    }
+
+    if (item.action && winManager[item.action]) {
+      const {params} = item
+      delete item.params
+      return {
+        ...item,
+        click: () => {
+          winManager[item.action](params.index||0,params.url, params.options||{}, params.other||{});
+        }
+      };
+    }
+
+    // 没有 action 的项直接返回
+    return item;
+  });
+};
+
 
 class MenuManager {
   constructor() {
@@ -15,101 +44,11 @@ class MenuManager {
    * Create the application menu
    */
   createMenu() {
+
+    const menus = processMenuItems(storageManager.loadMenu())
+    console.log(menus)
     const template = [
-      {
-        label: 'File',
-        submenu: [
-          {
-            label: 'InitWindow',
-            accelerator: 'CmdOrCtrl+N',
-            click: () => {
-              winManager.createWindow(0, 'https://electron-render.cicy.de5.net/initWindow', {});
-            }
-          },
-          { type: 'separator' },
-          {
-            label: 'GCS_0',
-            click: () => {
-              winManager.createWindow(0, 'https://shell.cloud.google.com/?hl=zh_CN&theme=system&fromcloudshell=true&show=terminal', {});
-            }
-          },
-          {
-            label: 'GCS_1',
-            click: () => {
-              winManager.createWindow(1, 'https://shell.cloud.google.com/?hl=zh_CN&theme=system&fromcloudshell=true&show=terminal', {});
-            }
-          },
-          { type: 'separator' },
-          {
-            label: 'AISTUDIO',
-            click: () => {
-              winManager.createWindow(0, 'https://aistudio.google.com/', {});
-            }
-          },
-          {
-            label: 'GhtGpt',
-            click: () => {
-              winManager.createWindow(0, 'https://www.chtgpt.com', {});
-            }
-          },
-          {
-            label: 'Google_0',
-            click: () => {
-              winManager.createWindow(0, 'https://www.google.com', {});
-            }
-          },
-
-          {
-            label: 'Google_1',
-            click: () => {
-              winManager.createWindow(1, 'https://www.google.com', {});
-            }
-          },
-          { type: 'separator' },
-          {
-            label: 'Colab_0',
-            click: () => {
-              winManager.createWindow(0, 'https://colab.research.google.com/', {});
-            }
-          },
-          {
-            label: 'Colab_1',
-            click: () => {
-              winManager.createWindow(1, 'https://colab.research.google.com/', {});
-            }
-          },
-          { type: 'separator' },
-          {
-            label: 'Github_0',
-            click: () => {
-              winManager.createWindow(0, 'https://www.github.com/', {});
-            }
-          },
-          {
-            label: 'Github_1',
-            click: () => {
-              winManager.createWindow(1, 'https://www.github.com/', {});
-            }
-          },
-          { type: 'separator' },
-
-          {
-            label: 'Cloudflare',
-            click: () => {
-              winManager.createWindow(1, 'https://dash.cloudflare.com/73595dcb392b333ce6be9c923cc30930', {});
-            }
-          },
-          { type: 'separator' },
-          {
-            label: 'Quit',
-            accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
-            click: () => {
-              const { app } = require('electron');
-              app.quit();
-            }
-          }
-        ]
-      },
+        ...menus,
       {
         label: 'Navigation',
         submenu: [

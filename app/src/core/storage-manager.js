@@ -4,6 +4,7 @@
  */
 
 const fs = require('fs').promises;
+const fs1 = require('fs');
 const path = require('path');
 const os = require('os');
 
@@ -11,6 +12,7 @@ class StorageManager {
     constructor() {
         this.storageDir = path.join(os.homedir(), 'electron-mcp');
         this.windowStateFile = path.join(this.storageDir, 'window-states.json');
+        this.menuFile = path.join(this.storageDir, 'menu.json');
         this.appStateFile = path.join(this.storageDir, 'app-state.json');
     }
 
@@ -55,7 +57,16 @@ class StorageManager {
             return {};
         }
     }
-
+    loadMenu() {
+        try {
+            const data = fs1.readFileSync(this.menuFile, 'utf8');
+            const parsed = JSON.parse(data);
+            return parsed || [];
+        } catch (error) {
+            console.log('No MENU found or error loading:', error.message);
+            return [];
+        }
+    }
     /**
      * Save application state
      */
