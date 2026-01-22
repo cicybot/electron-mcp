@@ -1168,64 +1168,68 @@ var require_utils_extension = __commonJS({
         const uri = new URL(api);
         utils.setBaseApi(`${uri.origin}`);
         utils.setToken(localStorage.getItem("__token"));
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
-          if (!localStorage.getItem("__username")) {
-            alert("__username is null");
-          } else {
-            document.querySelector("#noVNC_password_input").value = localStorage.getItem("__username");
+        try {
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+            if (!localStorage.getItem("__username")) {
+              alert("__username is null");
+            } else {
+              document.querySelector("#noVNC_password_input").value = localStorage.getItem("__username");
+            }
           }
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
-          try {
-            const clipboardData = await navigator.clipboard.readText();
-            if (clipboardData) {
-              console.log("clipboardData", clipboardData);
-              await utils.post_rpc({
-                method: "writeClipboard",
-                params: {
-                  text: clipboardData
-                }
-              });
-              console.log("clear clipboardData");
-              await navigator.clipboard.writeText("");
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+            try {
+              const clipboardData = await navigator.clipboard.readText();
+              if (clipboardData) {
+                console.log("clipboardData", clipboardData);
+                await utils.post_rpc({
+                  method: "writeClipboard",
+                  params: {
+                    text: clipboardData
+                  }
+                });
+                console.log("clear clipboardData");
+                await navigator.clipboard.writeText("");
+              }
+            } catch (err) {
+              console.log(err);
             }
-          } catch (err) {
-            console.log(err);
+            await utils.post_rpc({
+              method: "pyautoguiHotkey",
+              params: {
+                hot: "ctrl",
+                key: "v"
+              }
+            });
           }
-          await utils.post_rpc({
-            method: "pyautoguiHotkey",
-            params: {
-              hot: "ctrl",
-              key: "v"
-            }
-          });
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
-          await utils.post_rpc({
-            method: "pyautoguiHotkey",
-            params: {
-              hot: "ctrl",
-              key: "c"
-            }
-          });
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
-          await utils.post_rpc({
-            method: "pyautoguiHotkey",
-            params: {
-              hot: "ctrl",
-              key: "a"
-            }
-          });
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
-          await utils.post_rpc({
-            method: "pyautoguiHotkey",
-            params: {
-              hot: "ctrl",
-              key: "x"
-            }
-          });
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+            await utils.post_rpc({
+              method: "pyautoguiHotkey",
+              params: {
+                hot: "ctrl",
+                key: "c"
+              }
+            });
+          }
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
+            await utils.post_rpc({
+              method: "pyautoguiHotkey",
+              params: {
+                hot: "ctrl",
+                key: "a"
+              }
+            });
+          }
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
+            await utils.post_rpc({
+              method: "pyautoguiHotkey",
+              params: {
+                hot: "ctrl",
+                key: "x"
+              }
+            });
+          }
+        } catch (e2) {
+          console.error(e2);
         }
       }, true);
     }
