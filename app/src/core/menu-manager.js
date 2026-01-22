@@ -28,6 +28,79 @@ class MenuManager {
           },
           { type: 'separator' },
           {
+            label: 'GCS_0',
+            click: () => {
+              winManager.createWindow(0, 'https://shell.cloud.google.com/?hl=zh_CN&theme=system&fromcloudshell=true&show=terminal', {});
+            }
+          },
+          {
+            label: 'GCS_1',
+            click: () => {
+              winManager.createWindow(1, 'https://shell.cloud.google.com/?hl=zh_CN&theme=system&fromcloudshell=true&show=terminal', {});
+            }
+          },
+          { type: 'separator' },
+          {
+            label: 'AISTUDIO',
+            click: () => {
+              winManager.createWindow(0, 'https://aistudio.google.com/', {});
+            }
+          },
+          {
+            label: 'GhtGpt',
+            click: () => {
+              winManager.createWindow(0, 'https://www.chtgpt.com', {});
+            }
+          },
+          {
+            label: 'Google_0',
+            click: () => {
+              winManager.createWindow(0, 'https://www.google.com', {});
+            }
+          },
+
+          {
+            label: 'Google_1',
+            click: () => {
+              winManager.createWindow(1, 'https://www.google.com', {});
+            }
+          },
+          { type: 'separator' },
+          {
+            label: 'Colab_0',
+            click: () => {
+              winManager.createWindow(0, 'https://colab.research.google.com/', {});
+            }
+          },
+          {
+            label: 'Colab_1',
+            click: () => {
+              winManager.createWindow(1, 'https://colab.research.google.com/', {});
+            }
+          },
+          { type: 'separator' },
+          {
+            label: 'Github_0',
+            click: () => {
+              winManager.createWindow(0, 'https://www.github.com/', {});
+            }
+          },
+          {
+            label: 'Github_1',
+            click: () => {
+              winManager.createWindow(1, 'https://www.github.com/', {});
+            }
+          },
+          { type: 'separator' },
+
+          {
+            label: 'Cloudflare',
+            click: () => {
+              winManager.createWindow(1, 'https://dash.cloudflare.com/73595dcb392b333ce6be9c923cc30930', {});
+            }
+          },
+          { type: 'separator' },
+          {
             label: 'Quit',
             accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
             click: () => {
