@@ -432,7 +432,7 @@ const getTitle = () => {
 const init = () => {
     console.log("_G init")
     if (window._G.preload) {
-        window._G.preload({win_id: window._G.win_id})
+        window._G.preload({win_id: window.__win_id})
     }
     const autoRunJs = localStorage.getItem("__AutoRunJs")
     if (autoRunJs) {

@@ -209,25 +209,24 @@ class WindowManager {
       let initScript = `
       ${globalCode}
       window.__win_id = ${winId};
+      window.__account_index = ${accountIndex};
       console.log("dom-ready")
       if(window._G){
         console.log("_G init")
         window._G.init()
-        
         window._G.utilsExtension.onReady()
-        window._G.win_id = ${winId};
         window._G._l("dom-ready")
       }`;
 
       win.webContents.executeJavaScript(globalCode + `;(()=>{${initScript}})();`)
 
       // Update window title with win_id prefix
-      this._updateWindowTitle(winId, win);
+      this._updateWindowTitle(accountIndex,winId, win);
     });
 
     // Handle document title changes
     win.webContents.on('page-title-updated', (event, title) => {
-      this._updateWindowTitle(winId, win, title);
+      this._updateWindowTitle(accountIndex,winId, win, title);
     });
 
     // Set up network request monitoring
@@ -330,11 +329,11 @@ class WindowManager {
   /**
    * Update window title with win_id prefix
    */
-  _updateWindowTitle(winId, win, documentTitle = null) {
+  _updateWindowTitle(accountIndex,winId, win, documentTitle = null) {
     try {
       if (win && !win.isDestroyed()) {
         const title = documentTitle || win.webContents.getTitle();
-        win.setTitle(`#${winId} ${title}`);
+        win.setTitle(`# ${accountIndex} - ${winId} | ${title}`);
       }
     } catch (error) {
       console.error(`Failed to update window title for ${winId}:`, error);
