@@ -6,6 +6,7 @@
 const { Menu, BrowserWindow } = require('electron');
 const winManager = require('./window-manager');
 const storageManager = require('./storage-manager');
+const isMac = process.platform === 'darwin'
 
 // 递归处理菜单配置，绑定点击事件
 const processMenuItems = (menuItems) => {
@@ -50,6 +51,7 @@ class MenuManager {
     const template = [
         ...menus,
       {
+
         label: 'Navigation',
         submenu: [
           {
@@ -81,6 +83,47 @@ class MenuManager {
               this.forceReload();
             }
           }
+        ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'toggleDevTools' },
+          { type: 'separator' },
+          { role: 'resetZoom' },
+          { role: 'zoomIn' },
+          { role: 'zoomOut' },
+          { type: 'separator' },
+          { role: 'togglefullscreen' }
+        ]
+      },{
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          ...(isMac
+              ? [
+                { role: 'pasteAndMatchStyle' },
+                { role: 'delete' },
+                { role: 'selectAll' },
+                { type: 'separator' },
+                {
+                  label: 'Speech',
+                  submenu: [
+                    { role: 'startSpeaking' },
+                    { role: 'stopSpeaking' }
+                  ]
+                }
+              ]
+              : [
+                { role: 'delete' },
+                { type: 'separator' },
+                { role: 'selectAll' }
+              ])
         ]
       },
       {
