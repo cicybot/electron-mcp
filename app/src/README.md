@@ -15,7 +15,7 @@ src/
 │   ├── rpc-handler.js       # RPC method routing and handling
 │   └── mcp-integration.js   # MCP server integration
 ├── services/                # Business logic services
-│   ├── screenshot-service.js # Screenshot capture and processing
+│   ├── screenshot-cache-service.js # Screenshot caching and processing
 │   └── network-monitor.js   # Network request tracking
 ├── utils/                   # Shared utilities
 │   ├── utils.js            # General utilities
@@ -72,11 +72,11 @@ src/
 
 ### Service Modules
 
-#### `screenshot-service.js`
-- Captures screenshots from browser windows
-- Handles image processing and scaling
-- Supports multiple output formats
-- Manages screenshot file operations
+#### `screenshot-cache-service.js`
+- Multi-threaded caching system for screenshots
+- Captures screenshots from browser windows and desktop
+- Handles image processing and Mac-specific scaling
+- Manages screenshot caching and compression
 
 #### `network-monitor.js`
 - Tracks HTTP requests and responses
@@ -143,8 +143,8 @@ const win = await WindowManager.createWindow(1, 'https://example.com');
 
 ### Taking a Screenshot
 ```javascript
-const { ScreenshotService } = require('./services/screenshot-service');
-const image = await ScreenshotService.captureScreenshot(webContents);
+const { ScreenshotCacheService } = require('./services/screenshot-cache-service');
+const image = await ScreenshotCacheService.captureWindowLive(windowId);
 ```
 
 ### Handling RPC Calls

@@ -12,8 +12,8 @@ class AccountManager {
    * Switch active account context
    */
   switchAccount(accountIndex) {
-    if (typeof accountIndex !== 'number' || accountIndex < 0) {
-      throw new Error('Account index must be a non-negative number');
+    if (typeof accountIndex !== "number" || accountIndex < 0) {
+      throw new Error("Account index must be a non-negative number");
     }
     this.activeAccount = accountIndex;
     return accountIndex;
@@ -30,7 +30,7 @@ class AccountManager {
    * Validate account access for a window
    */
   validateWindowAccount(winId, requestedAccount) {
-    const windowManager = require('./window-manager');
+    const windowManager = require("./window-manager");
     // In a real implementation, we'd need to track which account owns which window
     // For now, return true if no specific account validation is needed
     return true;
@@ -49,7 +49,7 @@ class AccountManager {
    * Get windows for a specific account
    */
   getAccountWindows(accountIndex) {
-    const windowManager = require('./window-manager');
+    const windowManager = require("./window-manager");
     const allWindows = windowManager.getAllWindows();
 
     // Filter windows by account
@@ -82,10 +82,10 @@ class AccountManager {
    */
   getResourceSharingInfo() {
     return {
-      isolationLevel: 'full', // full | domain | none
+      isolationLevel: "full", // full | domain | none
       sharedCookies: false,
       sharedCache: false,
-      description: 'Each account has completely isolated browser context'
+      description: "Each account has completely isolated browser context",
     };
   }
 }

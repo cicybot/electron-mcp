@@ -15,7 +15,7 @@ src/
 │   ├── rpc-handler.js       # RPC 方法路由和处理
 │   └── mcp-integration.js   # MCP 服务器集成
 ├── services/                # 业务逻辑服务
-│   ├── screenshot-service.js # 截图捕获和处理
+│   ├── screenshot-cache-service.js # 截图缓存和处理
 │   └── network-monitor.js   # 网络请求跟踪
 ├── utils/                   # 共享工具
 │   ├── utils.js            # 通用工具
@@ -72,11 +72,11 @@ src/
 
 ### 服务模块
 
-#### `screenshot-service.js`
-- 从浏览器窗口捕获截图
-- 处理图像处理和缩放
-- 支持多种输出格式
-- 管理截图文件操作
+#### `screenshot-cache-service.js`
+- 多线程截图缓存系统
+- 从浏览器窗口和桌面捕获截图
+- 处理图像处理和 Mac 特定缩放
+- 管理截图缓存和压缩
 
 #### `network-monitor.js`
 - 跟踪 HTTP 请求和响应
@@ -143,8 +143,8 @@ const win = await WindowManager.createWindow(1, 'https://example.com');
 
 ### 截图
 ```javascript
-const { ScreenshotService } = require('./services/screenshot-service');
-const image = await ScreenshotService.captureScreenshot(webContents);
+const { ScreenshotCacheService } = require('./services/screenshot-cache-service');
+const image = await ScreenshotCacheService.captureWindowLive(windowId);
 ```
 
 ### 处理 RPC 调用

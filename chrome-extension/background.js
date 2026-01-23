@@ -368,6 +368,14 @@ var require_utils = __commonJS({
         }
       });
     }
+    function pyautoguiHotkey(keys) {
+      return post_rpc({
+        method: "pyautoguiHotkey",
+        params: {
+          keys
+        }
+      });
+    }
     function pyautoguiPaste() {
       return post_rpc({
         method: "pyautoguiPaste",
@@ -449,21 +457,27 @@ var require_utils = __commonJS({
       });
     };
     async function simulateClick(x, y, win_id) {
-      await sendInputEvent({
-        type: "mouseDown",
-        x,
-        y,
-        button: "left",
-        clickCount: 1
-      }, win_id);
-      setTimeout(() => {
-        sendInputEvent({
-          type: "mouseUp",
+      await sendInputEvent(
+        {
+          type: "mouseDown",
           x,
           y,
           button: "left",
           clickCount: 1
-        }, win_id);
+        },
+        win_id
+      );
+      setTimeout(() => {
+        sendInputEvent(
+          {
+            type: "mouseUp",
+            x,
+            y,
+            button: "left",
+            clickCount: 1
+          },
+          win_id
+        );
       }, 50);
     }
     async function sendKey(key, win_id) {
@@ -473,13 +487,16 @@ var require_utils = __commonJS({
       }, 50);
     }
     var getElementRect = async (sel, win_id) => {
-      const { result } = await executeJavaScript(`
+      const { result } = await executeJavaScript(
+        `
 const ele = document.querySelector("${sel}")
 const {width,height,top,left} = ele.getBoundingClientRect()
 return {
     width,height,top,left
 }
-    `, win_id);
+    `,
+        win_id
+      );
       return result;
     };
     var executeJavaScript = async (code, win_id) => {
@@ -696,6 +713,7 @@ return {
       getAccountWindows,
       pyautoguiType,
       pyautoguiPress,
+      pyautoguiHotkey,
       pyautoguiPaste,
       pyautoguiMove,
       pyautoguiPressEnter,
@@ -741,13 +759,17 @@ var openInElectron = async (tab) => {
   const domain = uri.hostname;
   const cookies = await chrome.cookies.getAll({ domain });
   console.log("openInElectron", domain, cookies);
-  openWindow(url, {
-    width: 1460
-  }, {
-    cookies,
-    showWin: true,
-    openDevtools: { mode: "right" }
-  });
+  openWindow(
+    url,
+    {
+      width: 1460
+    },
+    {
+      cookies,
+      showWin: true,
+      openDevtools: { mode: "right" }
+    }
+  );
 };
 var copyCookies = async (tab) => {
   console.log("copyCookies", tab.url);

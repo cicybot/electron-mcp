@@ -1,0 +1,119 @@
+[
+  {
+    "label": "Sites",
+    "submenu": [
+      {
+        "label": "InitWindow",
+        "accelerator": "CmdOrCtrl+N",
+        "action": "createWindow",
+        "params": {
+          "index": 0,
+          "url": "https://electron-render.cicy.de5.net/initWindow",
+          "options": {}
+        }
+      },
+      { "type": "separator" },
+      {
+        "label": "Jupyter Local",
+        "submenu": [
+          {
+            "label": "Jupyter 8888",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "http://localhost:8888",
+              "options": {}
+            }
+          },
+          {
+            "label": "Jupyter 8889",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "http://localhost:8889",
+              "options": {}
+            }
+          }
+        ]
+      },
+      { "type": "separator" },
+      {
+        "label": "Google",
+        "submenu": [
+          {
+            "label": "Google Search",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "https://www.google.com",
+              "options": {}
+            }
+          },
+          {
+            "label": "GCS",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "https://shell.cloud.google.com/?hl=zh_CN&theme=system&fromcloudshell=true&show=terminal",
+              "options": {}
+            }
+          },
+          {
+            "label": "Colab",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "https://colab.research.google.com/",
+              "options": {}
+            }
+          },
+          {
+            "label": "AISTUDIO",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "https://aistudio.google.com/",
+              "options": {}
+            }
+          }
+        ]
+      },
+      {
+        "label": "GitHub",
+        "submenu": [
+          {
+            "label": "Github",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "https://www.github.com/",
+              "options": {}
+            }
+          }
+        ]
+      },
+      { "type": "separator" },
+      {
+        "label": "AI Tools",
+        "submenu": [
+          {
+            "label": "ChatGpt",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "https://www.chtgpt.com",
+              "options": {}
+            }
+          }
+        ]
+      },
+
+      {
+        "label": "Quit",
+        "accelerator": "CmdOrCtrl+Q",
+        "action": "quitApp",
+        "params": {}
+      }
+    ]
+  }
+]

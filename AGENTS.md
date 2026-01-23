@@ -25,6 +25,14 @@ This file contains guidelines and commands for coding agents working in this Ele
 - `cd app && npm test -- --testNamePattern="test name"` - Run single test by name
 - `cd app && npm test -- tests/specific-file.test.js` - Run single test file
 - `cd app && npm test -- --watch` - Run tests in watch mode
+- `cd app && npm run test:coverage` - Run tests with code coverage report
+- `cd app && npm run test:coverage:watch` - Run tests in watch mode with coverage
+
+**Code Coverage Requirements:**
+- All new code must have **minimum 80% test coverage**
+- Critical services (managers, core services) require **90% coverage**
+- Coverage reports are generated in `app/coverage/` directory
+- Review coverage reports before committing: `open app/coverage/lcov-report/index.html`
 
 **Note:** Jest is installed in the backend. Tests are in `app/tests/` directory.
 

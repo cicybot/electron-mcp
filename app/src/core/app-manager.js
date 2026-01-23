@@ -3,20 +3,20 @@
  * Handles main Electron application lifecycle and global state
  */
 
-const { app, screen } = require('electron');
-const path = require('path');
+const { app, screen } = require("electron");
+const path = require("path");
 
 class AppManager {
   constructor() {
     this.isLocal = process.env.IS_LOCAL === "true";
-    this.mediaDir = path.join(app.getPath('home'), "assets");
+    this.mediaDir = path.join(app.getPath("home"), "assets");
     this.appName = process.env.APP_NAME || "Electron Mcp";
 
     this.init();
   }
 
   init() {
-    console.log("IS_LOCAL", this.isLocal, process.env.IS_LOCAL === 'true');
+    console.log("IS_LOCAL", this.isLocal, process.env.IS_LOCAL === "true");
     app.setName(this.appName);
   }
 
@@ -33,7 +33,7 @@ class AppManager {
       electron: process.versions.electron,
       node: process.versions.node,
       platform: process.platform,
-      arch: process.arch
+      arch: process.arch,
     };
   }
 

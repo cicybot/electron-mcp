@@ -3,30 +3,35 @@
  * Handles Electron menu with navigation functionality
  */
 
-const { Menu, BrowserWindow } = require('electron');
-const winManager = require('./window-manager');
-const storageManager = require('./storage-manager');
-const isMac = process.platform === 'darwin'
+const { Menu, BrowserWindow } = require("electron");
+const winManager = require("./window-manager");
+const storageManager = require("./storage-manager");
+const isMac = process.platform === "darwin";
 
 // 递归处理菜单配置，绑定点击事件
 const processMenuItems = (menuItems) => {
-  return menuItems.map(item => {
+  return menuItems.map((item) => {
     // 如果有子菜单，递归处理
     if (item.submenu) {
       return {
         ...item,
-        submenu: processMenuItems(item.submenu)
+        submenu: processMenuItems(item.submenu),
       };
     }
 
     if (item.action && winManager[item.action]) {
-      const {params} = item
-      delete item.params
+      const { params } = item;
+      delete item.params;
       return {
         ...item,
         click: () => {
-          winManager[item.action](params.index||0,params.url, params.options||{}, params.other||{});
-        }
+          winManager[item.action](
+            params.index || 0,
+            params.url,
+            params.options || {},
+            params.other || {}
+          );
+        },
       };
     }
 
@@ -34,7 +39,6 @@ const processMenuItems = (menuItems) => {
     return item;
   });
 };
-
 
 class MenuManager {
   constructor() {
@@ -45,67 +49,65 @@ class MenuManager {
    * Create the application menu
    */
   createMenu() {
-
-    const menus = processMenuItems(storageManager.loadMenu())
+    const menus = processMenuItems(storageManager.loadMenu());
+    const menus1 = processMenuItems(storageManager.loadCurrentDirMenu());
     const template = [
-      ...(process.platform === 'darwin'
-          ? [{ role: 'appMenu' }]
-          : []),
-        ...menus,
+      ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
+      ...menus,
+      ...menus1,
       {
-
-        label: 'Navigation',
+        label: "Navigation",
         submenu: [
           {
-            label: 'Go Back',
-            accelerator: 'CmdOrCtrl+[',
+            label: "Go Back",
+            accelerator: "CmdOrCtrl+[",
             click: () => {
               this.goBack();
-            }
+            },
           },
           {
-            label: 'Go Forward',
-            accelerator: 'CmdOrCtrl+]',
+            label: "Go Forward",
+            accelerator: "CmdOrCtrl+]",
             click: () => {
               this.goForward();
-            }
+            },
           },
-          { type: 'separator' },
+          { type: "separator" },
           {
-            label: 'Cookies',
+            label: "Cookies",
             submenu: [
               {
-                label: 'Export Cookies',
+                label: "Export Cookies",
                 click: () => {
                   this.exportCookies();
-                }
+                },
               },
               {
-                label: 'Import Cookies',
+                label: "Import Cookies",
                 click: () => {
                   this.importCookies();
-                }
-              }
-            ]
-          }
-        ]
+                },
+              },
+            ],
+          },
+        ],
       },
-      { role: 'fileMenu' },
-      { role: 'editMenu' },
-      { role: 'viewMenu' },
-      { role: 'windowMenu' },
+      { role: "fileMenu" },
+      { role: "editMenu" },
+      { role: "viewMenu" },
+      { role: "windowMenu" },
       {
-        role: 'help',
+        role: "help",
         submenu: [
           {
-            label: 'Learn More',
+            label: "Learn More",
             click: async () => {
-              const { shell } = require('electron')
-              await shell.openExternal('https://electronjs.org')
-            }
-          }
-        ]
-      }
+              const { shell } = require("electron");
+              await shell.openExternal("https://electronjs.org");
+            },
+          },
+        ],
+      },
     ];
 
     this.menu = Menu.buildFromTemplate(template);
@@ -162,22 +164,22 @@ class MenuManager {
   async exportCookies() {
     const focusedWindow = BrowserWindow.getFocusedWindow();
     if (!focusedWindow || focusedWindow.isDestroyed()) {
-      console.log('No focused window to export cookies from');
+      console.log("No focused window to export cookies from");
       return;
     }
 
     try {
       const cookies = await focusedWindow.webContents.session.cookies.get({});
-      const fs = require('fs').promises;
-      const path = require('path');
-      const os = require('os');
+      const fs = require("fs").promises;
+      const path = require("path");
+      const os = require("os");
 
-      const exportPath = path.join(os.homedir(), 'electron-mcp', 'cookies.json');
+      const exportPath = path.join(os.homedir(), "electron-mcp", "cookies.json");
       await fs.mkdir(path.dirname(exportPath), { recursive: true });
       await fs.writeFile(exportPath, JSON.stringify(cookies, null, 2));
       console.log(`Cookies exported to ${exportPath}`);
     } catch (error) {
-      console.error('Failed to export cookies:', error);
+      console.error("Failed to export cookies:", error);
     }
   }
 
@@ -185,19 +187,19 @@ class MenuManager {
    * Import cookies to the focused window's session
    */
   async importCookies() {
-    const { dialog } = require('electron');
+    const { dialog } = require("electron");
     const focusedWindow = BrowserWindow.getFocusedWindow();
     if (!focusedWindow || focusedWindow.isDestroyed()) {
-      console.log('No focused window to import cookies to');
+      console.log("No focused window to import cookies to");
       return;
     }
 
     const result = await dialog.showOpenDialog(focusedWindow, {
-      properties: ['openFile'],
+      properties: ["openFile"],
       filters: [
-        { name: 'JSON Files', extensions: ['json'] },
-        { name: 'All Files', extensions: ['*'] }
-      ]
+        { name: "JSON Files", extensions: ["json"] },
+        { name: "All Files", extensions: ["*"] },
+      ],
     });
 
     if (result.canceled || result.filePaths.length === 0) {
@@ -207,18 +209,18 @@ class MenuManager {
     const filePath = result.filePaths[0];
 
     try {
-      const fs = require('fs').promises;
-      const cookiesData = await fs.readFile(filePath, 'utf8');
+      const fs = require("fs").promises;
+      const cookiesData = await fs.readFile(filePath, "utf8");
       const cookies = JSON.parse(cookiesData);
 
-      const { setCookies } = require('../helpers');
+      const { setCookies } = require("../helpers");
       await setCookies(focusedWindow.webContents, cookies);
       console.log(`Cookies imported from ${filePath}`);
 
       // Reload the window to apply cookies
       focusedWindow.webContents.reload();
     } catch (error) {
-      console.error('Failed to import cookies:', error);
+      console.error("Failed to import cookies:", error);
     }
   }
 }

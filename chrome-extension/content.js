@@ -87,9 +87,7 @@ var require_utils_browser = __commonJS({
         for (let i = node.childNodes.length - 1; i >= 0; i--) {
           cleanNode(node.childNodes[i]);
         }
-        if (node.childNodes.length === 0 || [...node.childNodes].every(
-          (n) => n.nodeType === Node.TEXT_NODE && !n.textContent.trim()
-        )) {
+        if (node.childNodes.length === 0 || [...node.childNodes].every((n) => n.nodeType === Node.TEXT_NODE && !n.textContent.trim())) {
           node.remove();
         }
       } else if (node.nodeType === Node.TEXT_NODE) {
@@ -136,82 +134,226 @@ var require_utils_browser = __commonJS({
       return t;
     }
     var PROMPT_DIV_ID = "__promptDiv";
-    function showPromptArea() {
-      let { width, height, top, left } = {};
-      if (!width) width = 600;
-      if (!height) height = 180;
-      if (!top) top = 50;
-      if (!left) left = 50;
-      const existing = document.getElementById(PROMPT_DIV_ID);
-      if (existing) existing.remove();
-      const div = document.createElement("div");
-      div.id = PROMPT_DIV_ID;
-      div.style.cssText = `
+    var PROMPT_ICON_ID = "__promptIcon";
+    function showPromptIcon() {
+      hidePromptIcon();
+      const icon = document.createElement("div");
+      icon.id = PROMPT_ICON_ID;
+      icon.style.cssText = `
     position: fixed;
-    width: ${width}px;
-    height: ${height}px;
-    top: ${top}px;
-    left: ${left}px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 2px solid #333;
-    border-radius: 4px;
-    z-index: 2147483647;
-    box-shadow: 0 4px 6px rgba(0,0,0,1);`;
-      const handles = ["nw", "ne", "sw", "se"];
-      handles.forEach((pos) => {
-        const handle = document.createElement("div");
-        handle.className = `resize-handle ${pos}`;
-        handle.style.cssText = `
-      position: absolute;
-      width: 10px;
-      height: 10px;
-      background: #333;
-      ${pos.includes("n") ? "top: -5px;" : "bottom: -5px;"}
-      ${pos.includes("w") ? "left: -5px;" : "right: -5px;"}
-      cursor: ${pos}-resize;
-    `;
-        div.appendChild(handle);
-      });
-      const textarea = document.createElement("textarea");
-      textarea.style.cssText = `
-width: 100%;
-height: 100%;
-    `;
-      textarea.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
+    top: 50%;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    background: #1a1a1a;
+    border: 2px solid #444;
+    border-radius: 50%;
+    z-index: 2147483646;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    user-select: none;
+  `;
+      icon.innerHTML = "\u{1F4AC}";
+      icon.title = "Open Prompt Area (Drag to move)";
+      let isDragging = false;
+      let hasMoved = false;
+      let startX, startY, startLeft, startTop;
+      icon.addEventListener("mousedown", (e) => {
+        if (e.button === 0) {
+          isDragging = true;
+          hasMoved = false;
+          startX = e.clientX;
+          startY = e.clientY;
+          startLeft = icon.offsetLeft;
+          startTop = icon.offsetTop;
+          icon.style.cursor = "grabbing";
+          icon.style.transition = "none";
           e.preventDefault();
-          const value = textarea.value;
-          if (value.trim()) {
-            alert(value);
-            textarea.value = "";
+        }
+      });
+      document.addEventListener("mousemove", (e) => {
+        if (isDragging) {
+          const newLeft = startLeft + (e.clientX - startX);
+          const newTop = startTop + (e.clientY - startY);
+          if (Math.abs(e.clientX - startX) > 3 || Math.abs(e.clientY - startY) > 3) {
+            hasMoved = true;
+          }
+          const maxLeft = window.innerWidth - icon.offsetWidth;
+          const maxTop = window.innerHeight - icon.offsetHeight;
+          icon.style.left = `${Math.max(0, Math.min(newLeft, maxLeft))}px`;
+          icon.style.top = `${Math.max(0, Math.min(newTop, maxTop))}px`;
+          icon.style.right = "auto";
+        }
+      });
+      document.addEventListener("mouseup", () => {
+        if (isDragging) {
+          isDragging = false;
+          icon.style.cursor = "move";
+          icon.style.transition = "all 0.3s ease";
+        }
+      });
+      icon.addEventListener("click", (e) => {
+        if (!hasMoved) {
+          const existingPrompt = document.getElementById(PROMPT_DIV_ID);
+          if (existingPrompt) {
+            hidePromptArea();
+          } else {
+            showPromptArea();
           }
         }
       });
-      div.appendChild(textarea);
-      const closeButton = document.createElement("div");
+      icon.addEventListener("mouseenter", () => {
+        if (!isDragging) {
+          icon.style.transform = "scale(1.1)";
+          icon.style.background = "#2a2a2a";
+        }
+      });
+      icon.addEventListener("mouseleave", () => {
+        if (!isDragging) {
+          icon.style.transform = "scale(1)";
+          icon.style.background = "#1a1a1a";
+        }
+      });
+      document.body.appendChild(icon);
+    }
+    function hidePromptIcon() {
+      const icon = document.getElementById(PROMPT_ICON_ID);
+      if (icon) icon.remove();
+    }
+    function showPromptArea() {
+      hidePromptArea();
+      hidePromptIcon();
+      const div = document.createElement("div");
+      div.id = PROMPT_DIV_ID;
+      div.style.cssText = `
+        position: fixed;
+        width: 600px;
+        height: 200px;
+        top: 50px;
+        left: 50px;
+        background: #1a1a1a;
+        border: 2px solid #444;
+        border-radius: 4px;
+        z-index: 2147483647;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+    `;
+      const header = document.createElement("div");
+      header.style.cssText = `
+        background: #2a2a2a;
+        color: white;
+        padding: 8px;
+        border-bottom: 1px solid #444;
+        cursor: move;
+        font-weight: bold;
+        user-select: none;
+    `;
+      header.textContent = "Prompt Area";
+      const closeButton = document.createElement("span");
       closeButton.innerHTML = "\xD7";
       closeButton.style.cssText = `
-        position: absolute;
-        top: 2px;
-        right: 2px;
-        width: 16px;
-        height: 16px;
-        background: rgba(255, 0, 0, 0.8);
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-weight: bold;
-        cursor: pointer;
-        z-index: 1;
-        opacity: 1;
-    `;
-      closeButton.addEventListener("click", () => {
+    float: right;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #ccc;
+    margin-right: 5px;
+  `;
+      closeButton.addEventListener("click", (e) => {
+        e.stopPropagation();
         hidePromptArea();
       });
-      div.appendChild(closeButton);
+      header.appendChild(closeButton);
+      const content = document.createElement("div");
+      content.style.cssText = `
+        flex: 1;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+    `;
+      const textarea = document.createElement("textarea");
+      textarea.style.cssText = `
+        width: 100%;
+        height: calc(100% - 40px);
+        resize: none;
+        border: 1px solid #444;
+        background: #0a0a0a;
+        color: white;
+        padding: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        box-sizing: border-box;
+        outline: none;
+    `;
+      textarea.placeholder = "Enter your prompt here...";
+      textarea.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey && textarea.value.trim() !== "") {
+          e.preventDefault();
+          window.handleElectronRender(textarea);
+        }
+      });
+      const buttonContainer = document.createElement("div");
+      buttonContainer.style.cssText = `
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        justify-content: flex-end;
+    `;
+      const submitButton = document.createElement("button");
+      submitButton.textContent = "Submit";
+      submitButton.style.cssText = `
+        padding: 6px 16px;
+        background: #007acc;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    `;
+      submitButton.addEventListener("click", () => {
+        alert(textarea.value);
+        textarea.value = "";
+      });
+      const cancelButton = document.createElement("button");
+      cancelButton.textContent = "Cancel";
+      cancelButton.style.cssText = `
+        padding: 6px 16px;
+        background: #555;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    `;
+      cancelButton.addEventListener("click", hidePromptArea);
+      buttonContainer.appendChild(submitButton);
+      buttonContainer.appendChild(cancelButton);
+      content.appendChild(textarea);
+      content.appendChild(buttonContainer);
+      const resizeHandles = ["nw", "ne", "sw", "se"];
+      resizeHandles.forEach((pos) => {
+        const handle = document.createElement("div");
+        handle.className = `resize-handle ${pos}`;
+        handle.style.cssText = `
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #666;
+            ${pos.includes("n") ? "top: -5px;" : "bottom: -5px;"}
+            ${pos.includes("w") ? "left: -5px;" : "right: -5px;"}
+            cursor: ${pos}-resize;
+        `;
+        div.appendChild(handle);
+      });
+      div.appendChild(header);
+      div.appendChild(content);
       document.body.appendChild(div);
       let isDragging = false;
       let isResizing = false;
@@ -227,12 +369,13 @@ height: 100%;
           startLeft = div.offsetLeft;
           startTop = div.offsetTop;
           e.preventDefault();
-        } else {
+        } else if (e.target === header || header.contains(e.target)) {
           isDragging = true;
           startX = e.clientX;
           startY = e.clientY;
           startLeft = div.offsetLeft;
           startTop = div.offsetTop;
+          header.style.cursor = "grabbing";
           e.preventDefault();
         }
       });
@@ -240,8 +383,10 @@ height: 100%;
         if (isDragging) {
           const newLeft = startLeft + (e.clientX - startX);
           const newTop = startTop + (e.clientY - startY);
-          div.style.left = `${newLeft}px`;
-          div.style.top = `${newTop}px`;
+          const maxLeft = window.innerWidth - div.offsetWidth;
+          const maxTop = window.innerHeight - div.offsetHeight;
+          div.style.left = `${Math.max(0, Math.min(newLeft, maxLeft))}px`;
+          div.style.top = `${Math.max(0, Math.min(newTop, maxTop))}px`;
         } else if (isResizing) {
           let newWidth = startWidth;
           let newHeight = startHeight;
@@ -261,8 +406,8 @@ height: 100%;
             newHeight = startHeight - (e.clientY - startY);
             newTop = startTop + (e.clientY - startY);
           }
-          const finalWidth = Math.max(50, newWidth);
-          const finalHeight = Math.max(50, newHeight);
+          const finalWidth = Math.max(300, newWidth);
+          const finalHeight = Math.max(100, newHeight);
           div.style.width = `${finalWidth}px`;
           div.style.height = `${finalHeight}px`;
           div.style.left = `${newLeft}px`;
@@ -276,7 +421,10 @@ height: 100%;
     }
     function hidePromptArea() {
       const div = document.getElementById(PROMPT_DIV_ID);
-      if (div) div.remove();
+      if (div) {
+        div.remove();
+        showPromptIcon();
+      }
     }
     var FLOAT_DIV_ID = "__floatDiv";
     function showFloatDiv(options) {
@@ -492,9 +640,7 @@ height: 100%;
       const links = Array.from(document.querySelectorAll("a[href]")).map((a) => ({
         url: a.getAttribute("href"),
         a: a.innerText.trim()
-      })).filter(
-        (item) => item.url && item.url.trim() !== "" && item.url.trim() !== "undefined"
-      );
+      })).filter((item) => item.url && item.url.trim() !== "" && item.url.trim() !== "undefined");
       return links;
     };
     var setAutoRunJs = (code) => {
@@ -516,15 +662,19 @@ height: 100%;
     };
     var preload = async ({ win_id }) => {
       console.log("_G preload");
-      window.addEventListener("keydown", async (e) => {
-        const cmdKeyPressed = (k) => {
-          return (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === k;
-        };
-        if (cmdKeyPressed("\\")) {
-          e.preventDefault();
-          console.log(e.key);
-        }
-      }, true);
+      window.addEventListener(
+        "keydown",
+        async (e) => {
+          const cmdKeyPressed = (k) => {
+            return (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === k;
+          };
+          if (cmdKeyPressed("\\")) {
+            e.preventDefault();
+            console.log(e.key);
+          }
+        },
+        true
+      );
       d("preload win_id:", win_id);
     };
     var _l = (...args) => {
@@ -551,9 +701,20 @@ height: 100%;
       Storage,
       showPromptArea,
       hidePromptArea,
+      showPromptIcon,
+      hidePromptIcon,
       showFloatDiv,
       hideFloatDiv
     };
+    if (typeof window !== "undefined" && window.document) {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => {
+          setTimeout(showPromptIcon, 100);
+        });
+      } else {
+        setTimeout(showPromptIcon, 100);
+      }
+    }
   }
 });
 
@@ -922,6 +1083,14 @@ var require_utils = __commonJS({
         }
       });
     }
+    function pyautoguiHotkey(keys) {
+      return post_rpc({
+        method: "pyautoguiHotkey",
+        params: {
+          keys
+        }
+      });
+    }
     function pyautoguiPaste() {
       return post_rpc({
         method: "pyautoguiPaste",
@@ -1003,21 +1172,27 @@ var require_utils = __commonJS({
       });
     };
     async function simulateClick(x, y, win_id) {
-      await sendInputEvent({
-        type: "mouseDown",
-        x,
-        y,
-        button: "left",
-        clickCount: 1
-      }, win_id);
-      setTimeout(() => {
-        sendInputEvent({
-          type: "mouseUp",
+      await sendInputEvent(
+        {
+          type: "mouseDown",
           x,
           y,
           button: "left",
           clickCount: 1
-        }, win_id);
+        },
+        win_id
+      );
+      setTimeout(() => {
+        sendInputEvent(
+          {
+            type: "mouseUp",
+            x,
+            y,
+            button: "left",
+            clickCount: 1
+          },
+          win_id
+        );
       }, 50);
     }
     async function sendKey(key, win_id) {
@@ -1027,13 +1202,16 @@ var require_utils = __commonJS({
       }, 50);
     }
     var getElementRect = async (sel, win_id) => {
-      const { result } = await executeJavaScript(`
+      const { result } = await executeJavaScript(
+        `
 const ele = document.querySelector("${sel}")
 const {width,height,top,left} = ele.getBoundingClientRect()
 return {
     width,height,top,left
 }
-    `, win_id);
+    `,
+        win_id
+      );
       return result;
     };
     var executeJavaScript = async (code, win_id) => {
@@ -1250,6 +1428,7 @@ return {
       getAccountWindows,
       pyautoguiType,
       pyautoguiPress,
+      pyautoguiHotkey,
       pyautoguiPaste,
       pyautoguiMove,
       pyautoguiPressEnter,
@@ -1269,13 +1448,18 @@ var require_utils_extension = __commonJS({
     var utils = require_utils();
     var utilsBrowser = require_utils_browser();
     function onReady2() {
+      utilsBrowser.showPromptIcon();
       console.log("_G extension onReady");
       setInterval(() => {
         console.debug("loop");
         if (location.href.startsWith("https://colab.research.google.com/")) {
-          const res = document.querySelector("body > div.notebook-vertical > div.notebook-horizontal > colab-left-pane > colab-resizer");
+          const res = document.querySelector(
+            "body > div.notebook-vertical > div.notebook-horizontal > colab-left-pane > colab-resizer"
+          );
           if (!res) {
-            document.querySelector("#cell-3kzh_tuJISRi > div.main-content > div > div.codecell-input-output > div.inputarea.horizontal.layout.code > div.cell-gutter > div > colab-run-button").shadowRoot.querySelector("#run-button").click();
+            document.querySelector(
+              "#cell-3kzh_tuJISRi > div.main-content > div > div.codecell-input-output > div.inputarea.horizontal.layout.code > div.cell-gutter > div > colab-run-button"
+            ).shadowRoot.querySelector("#run-button").click();
           }
         }
         if (location.href.startsWith("https://shell.cloud.google.com/")) {
@@ -1299,84 +1483,94 @@ var require_utils_extension = __commonJS({
       }, 2e4);
       regVncEvent();
     }
+    window.handleElectronRender = (textarea) => {
+      const value = textarea.value;
+      const uri = new URL(location.href);
+      const win_id = uri.searchParams.get("win_id");
+      console.log({ win_id, uri, value });
+    };
     window.regVncEvent__ = false;
     function regVncEvent() {
       if (window.regVncEvent__) {
         return;
       }
       window.regVncEvent__ = true;
-      document.addEventListener("keydown", async (e) => {
-        const url = location.href;
-        const vnc_port = "-6080.";
-        if (url.indexOf(vnc_port) === -1) return;
-        const api = url.replace(vnc_port, "-3456.");
-        const uri = new URL(api);
-        utils.setBaseApi(`${uri.origin}`);
-        utils.setToken(localStorage.getItem("__token"));
-        try {
-          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
-            if (!localStorage.getItem("__username")) {
-              alert("__username is null");
-            } else {
-              document.querySelector("#noVNC_password_input").value = localStorage.getItem("__username");
+      document.addEventListener(
+        "keydown",
+        async (e) => {
+          const url = location.href;
+          const vnc_port = "-6080.";
+          if (url.indexOf(vnc_port) === -1) return;
+          const api = url.replace(vnc_port, "-3456.");
+          const uri = new URL(api);
+          utils.setBaseApi(`${uri.origin}`);
+          utils.setToken(localStorage.getItem("__token"));
+          try {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+              if (!localStorage.getItem("__passwd")) {
+                alert("__passwd is null");
+              } else {
+                document.querySelector("#noVNC_password_input").value = localStorage.getItem("__passwd");
+              }
             }
-          }
-          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
-            try {
-              const clipboardData = await navigator.clipboard.readText();
-              if (clipboardData) {
-                console.log("clipboardData", clipboardData);
-                await utils.post_rpc({
-                  method: "writeClipboard",
-                  params: {
-                    text: clipboardData
-                  }
-                });
-                console.log("clear clipboardData");
-                await navigator.clipboard.writeText("");
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+              try {
+                const clipboardData = await navigator.clipboard.readText();
+                if (clipboardData) {
+                  console.log("clipboardData", clipboardData);
+                  await utils.post_rpc({
+                    method: "writeClipboard",
+                    params: {
+                      text: clipboardData
+                    }
+                  });
+                  console.log("clear clipboardData");
+                  await navigator.clipboard.writeText("");
+                }
+              } catch (err) {
+                console.log(err);
               }
-            } catch (err) {
-              console.log(err);
+              await utils.post_rpc({
+                method: "pyautoguiHotkey",
+                params: {
+                  hot: "ctrl",
+                  key: "v"
+                }
+              });
             }
-            await utils.post_rpc({
-              method: "pyautoguiHotkey",
-              params: {
-                hot: "ctrl",
-                key: "v"
-              }
-            });
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+              await utils.post_rpc({
+                method: "pyautoguiHotkey",
+                params: {
+                  hot: "ctrl",
+                  key: "c"
+                }
+              });
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
+              await utils.post_rpc({
+                method: "pyautoguiHotkey",
+                params: {
+                  hot: "ctrl",
+                  key: "a"
+                }
+              });
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
+              await utils.post_rpc({
+                method: "pyautoguiHotkey",
+                params: {
+                  hot: "ctrl",
+                  key: "x"
+                }
+              });
+            }
+          } catch (e2) {
+            console.error(e2);
           }
-          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
-            await utils.post_rpc({
-              method: "pyautoguiHotkey",
-              params: {
-                hot: "ctrl",
-                key: "c"
-              }
-            });
-          }
-          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
-            await utils.post_rpc({
-              method: "pyautoguiHotkey",
-              params: {
-                hot: "ctrl",
-                key: "a"
-              }
-            });
-          }
-          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
-            await utils.post_rpc({
-              method: "pyautoguiHotkey",
-              params: {
-                hot: "ctrl",
-                key: "x"
-              }
-            });
-          }
-        } catch (e2) {
-          console.error(e2);
-        }
-      }, true);
+        },
+        true
+      );
     }
     module2.exports = { onReady: onReady2 };
   }

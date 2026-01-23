@@ -3,11 +3,11 @@
  * Refactored with modular architecture
  */
 
-const { app,screen,session,BrowserWindow } = require('electron');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const contextMenu = require('electron-context-menu').default || require('electron-context-menu');
+const { app, screen, session, BrowserWindow } = require("electron");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const contextMenu = require("electron-context-menu").default || require("electron-context-menu");
 const platform = process.platform;
 //
 // if(platform === 'linux'){
@@ -36,43 +36,43 @@ const platform = process.platform;
 // app.commandLine.appendSwitch('disable-background-timer-throttling');
 
 // Set up logging to file
-const logDir = path.join(os.homedir(), 'electron-mcp', 'logs');
+const logDir = path.join(os.homedir(), "electron-mcp", "logs");
 if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
-const logFile = path.join(logDir, 'app.log');
-const errorLogFile = path.join(logDir, 'error.log');
-const logStream = fs.createWriteStream(logFile, { flags: 'a' });
-const errorLogStream = fs.createWriteStream(errorLogFile, { flags: 'a' });
+const logFile = path.join(logDir, "app.log");
+const errorLogFile = path.join(logDir, "error.log");
+const logStream = fs.createWriteStream(logFile, { flags: "a" });
+const errorLogStream = fs.createWriteStream(errorLogFile, { flags: "a" });
 
 // Duplicate stdout to console and log file
 const originalStdoutWrite = process.stdout.write;
-process.stdout.write = function(chunk, encoding, callback) {
+process.stdout.write = function (chunk, encoding, callback) {
   logStream.write(chunk, encoding);
   return originalStdoutWrite.call(this, chunk, encoding, callback);
 };
 
 // Duplicate stderr to console and error log file
 const originalStderrWrite = process.stderr.write;
-process.stderr.write = function(chunk, encoding, callback) {
+process.stderr.write = function (chunk, encoding, callback) {
   errorLogStream.write(chunk, encoding);
   return originalStderrWrite.call(this, chunk, encoding, callback);
 };
 
 // Import modular components
-const appManager = require('./core/app-manager');
-const winManager = require('./core/window-manager');
-const menuManager = require('./core/menu-manager');
-const expressServer = require('./server/express-server');
+const appManager = require("./core/app-manager");
+const winManager = require("./core/window-manager");
+const menuManager = require("./core/menu-manager");
+const expressServer = require("./server/express-server");
 
 /**
  * Load default cookies from ~/electron-mcp/cookies.json if it exists
  */
 async function loadDefaultCookies() {
   try {
-    const cookiesPath = path.join(os.homedir(), 'electron-mcp', 'cookies.json');
+    const cookiesPath = path.join(os.homedir(), "electron-mcp", "cookies.json");
     if (fs.existsSync(cookiesPath)) {
-      const cookiesData = fs.readFileSync(cookiesPath, 'utf8');
+      const cookiesData = fs.readFileSync(cookiesPath, "utf8");
       const cookies = JSON.parse(cookiesData);
       console.log(`Loading ${cookies.length} cookies from ${cookiesPath}`);
 
@@ -80,26 +80,34 @@ async function loadDefaultCookies() {
       global.defaultCookies = cookies;
     }
   } catch (error) {
-    console.error('Failed to load default cookies:', error);
+    console.error("Failed to load default cookies:", error);
   }
 }
 
 // Initialize context menu
 contextMenu({
-  showSaveImageAs: true
+  showSaveImageAs: true,
 });
 
 /**
  * Application ready handler
  */
 app.whenReady().then(async () => {
-  console.log('Electron app ready');
-  console.log("Session path:",session.defaultSession.getStoragePath())
-  const t = screen.getAllDisplays()
+  console.log("Electron app ready");
+  console.log("Session path:", session.defaultSession.getStoragePath());
+  const t = screen.getAllDisplays();
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.bounds;
-  console.log("PrimaryDisplay Bounds:",width, height)
+  console.log("PrimaryDisplay Bounds:", width, height);
 
+  if (BrowserWindow.getAllWindows().length === 0) {
+    // Could create a default window here if needed
+    winManager.createWindow(0, "https://electron-render.cicy.de5.net", {
+      width: 1024,
+      x: 20,
+      y: 20,
+    });
+  }
   // Initialize window manager and restore previous session
   await winManager.init();
 
@@ -111,23 +119,18 @@ app.whenReady().then(async () => {
 
   // Start Express server (includes MCP integration)
   expressServer.start();
-  
-    if (BrowserWindow.getAllWindows().length === 0) {
-      // Could create a default window here if needed
-      winManager.createWindow(0,"https://electron-render.cicy.de5.net",{})
-    }
+
   // Handle app activation (macOS)
-  app.on('activate', () => {
+  app.on("activate", () => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-
   });
 });
 
 /**
  * Prevent app quit on window close (keep running in background)
  */
-app.on('before-quit', (event) => {
+app.on("before-quit", (event) => {
   console.log("Application before-quit");
   // Uncomment to prevent quit and keep app running
   // event.preventDefault();
@@ -136,10 +139,10 @@ app.on('before-quit', (event) => {
 /**
  * Window-all-closed handler (except on macOS)
  */
-app.on('window-all-closed', () => {
+app.on("window-all-closed", () => {
   // On macOS it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
