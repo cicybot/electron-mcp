@@ -1191,19 +1191,7 @@ class McpIntegration {
           };
         }
       }
-    );
-
-      try {
-        return {
-          content: [{ type: "text", text: "Pasted content" }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: `Error: ${error.message}` }],
-          isError: true,
-        };
-      }
-    });
+     );
 
     this.registerTool(
       "Move mouse with PyAutoGUI",
@@ -1225,17 +1213,7 @@ class McpIntegration {
       }
     );
 
-      try {
-        return {
-          content: [{ type: "text", text: "Pressed Enter" }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: `Error: ${error.message}` }],
-          isError: true,
-        };
-      }
-    });
+    // Removed stray block (previously caused syntax error)
 
     this.registerTool(
       "Press Backspace key with PyAutoGUI",
@@ -1254,41 +1232,7 @@ class McpIntegration {
       }
     );
 
-      try {
-        return {
-          content: [{ type: "text", text: "Pressed Space" }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: `Error: ${error.message}` }],
-          isError: true,
-        };
-      }
-    });
-
-      try {
-        return {
-          content: [{ type: "text", text: "Pressed Escape" }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: `Error: ${error.message}` }],
-          isError: true,
-        };
-      }
-    });
-
-      try {
-        return {
-          content: [{ type: "text", text: JSON.stringify(result.result, null, 2) }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: "text", text: `Error: ${error.message}` }],
-          isError: true,
-        };
-      }
-    });
+    // Removed stray block (previously caused syntax error)
 
     this.registerTool(
       "Write text with interval with PyAutoGUI",
