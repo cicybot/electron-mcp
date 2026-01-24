@@ -4,7 +4,10 @@ const { spawn, exec } = require('child_process');
 const { platform } = require('os');
 const path = require('path');
 
-const PORT = 3456; // Port to check
+// Parse command line arguments
+const args = process.argv.slice(2);
+const PORT = args.includes('--port') ? parseInt(args[args.indexOf('--port') + 1]) : 3456;
+const USE_XVFB = args.includes('--xvfb');
 
 function checkPort(port) {
   return new Promise((resolve) => {
@@ -48,6 +51,51 @@ async function waitForPortFree(port, maxAttempts = 10, delay = 1000) {
   return false;
 }
 
+function checkXvfbInstalled() {
+  return new Promise((resolve) => {
+    exec('which xvfb-run', (error, stdout) => {
+      resolve(!error && stdout.trim().length > 0);
+    });
+  });
+}
+
+function installXvfb() {
+  return new Promise((resolve, reject) => {
+    console.log('Installing Xvfb...');
+    
+    // Try different package managers
+    const commands = [
+      'sudo apt-get update && sudo apt-get install -y xvfb',
+      'sudo yum install -y xorg-x11-server-Xvfb',
+      'sudo dnf install -y xorg-x11-server-Xvfb'
+    ];
+    
+    let attempts = 0;
+    
+    function tryNextCommand() {
+      if (attempts >= commands.length) {
+        reject(new Error('Failed to install Xvfb with available package managers'));
+        return;
+      }
+      
+      const command = commands[attempts];
+      console.log(`Trying: ${command}`);
+      
+      exec(command, (error, stdout, stderr) => {
+        if (!error) {
+          console.log('Xvfb installed successfully');
+          resolve();
+        } else {
+          attempts++;
+          tryNextCommand();
+        }
+      });
+    }
+    
+    tryNextCommand();
+  });
+}
+
 function startElectron() {
   const electronArgs = [];
   
@@ -67,10 +115,19 @@ function startElectron() {
   // Add the main script as the last argument
   electronArgs.push(path.join(__dirname, '../src/main.js'));
   
-  const electron = spawn('electron', electronArgs, {
+  let command = 'electron';
+  const spawnOptions = {
     stdio: 'inherit',
-    env: { ...process.env }
-  });
+    env: { ...process.env, DISPLAY: USE_XVFB ? ':99' : process.env.DISPLAY }
+  };
+  
+  // Use xvfb-run if requested and on Linux
+  if (platform() === 'linux' && USE_XVFB) {
+    command = 'xvfb-run';
+    electronArgs.unshift('--auto-servernum', '--server-args=-screen 0 1024x768x24', 'electron');
+  }
+  
+  const electron = spawn(command, electronArgs, spawnOptions);
   
   electron.on('error', (error) => {
     console.error('Failed to start Electron:', error.message);
@@ -85,6 +142,24 @@ function startElectron() {
 
 async function main() {
   console.log('Starting Electron application...');
+  console.log(`Using port: ${PORT}`);
+  console.log(`Platform: ${platform()}`);
+  
+  // Check and install Xvfb if needed (Linux only)
+  if (platform() === 'linux' && USE_XVFB) {
+    const xvfbInstalled = await checkXvfbInstalled();
+    if (!xvfbInstalled) {
+      try {
+        await installXvfb();
+        console.log('Xvfb is now available');
+      } catch (error) {
+        console.error('Failed to install Xvfb:', error.message);
+        console.log('Continuing without Xvfb...');
+      }
+    } else {
+      console.log('Xvfb is already installed');
+    }
+  }
   
   // Check if port is occupied
   const isPortOccupied = await checkPort(PORT);
@@ -105,6 +180,29 @@ async function main() {
   
   // Start Electron
   startElectron();
+}
+
+// Show usage information
+function showUsage() {
+  console.log(`
+Usage: node start.sh [options]
+
+Options:
+  --port <number>    Specify port to check (default: 3456)
+  --xvfb             Use Xvfb on Linux (installs if not available)
+  --help             Show this help message
+
+Examples:
+  node start.sh --port 8080
+  node start.sh --xvfb
+  node start.sh --port 8080 --xvfb
+  `);
+}
+
+// Handle help flag
+if (args.includes('--help') || args.includes('-h')) {
+  showUsage();
+  process.exit(0);
 }
 
 main().catch(console.error);
