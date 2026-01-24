@@ -508,48 +508,12 @@ function saveScreenshot(win_id, filePath, options) {
 
 
 
-// Account management
-function switchAccount(account_index) {
-  return post_rpc({
-    method: "switchAccount",
-    params: {
-      account_index,
-    },
-  });
-}
-
-function getAccountInfo(win_id) {
-  return post_rpc({
-    method: "getAccountInfo",
-    params: {
-      win_id,
-    },
-  });
-}
-
-function getAccountWindows(account_index) {
-  return post_rpc({
-    method: "getAccountWindows",
-    params: {
-      account_index,
-    },
-  });
-}
-
 // PyAutoGUI methods
 
 
 
 
-function loadURL(url, win_id) {
-  return post_rpc({
-    method: "loadURL",
-    params: {
-      win_id: win_id || 1,
-      url: url,
-    },
-  });
-}
+
 
 
 async function simulateClick(x, y, win_id) {

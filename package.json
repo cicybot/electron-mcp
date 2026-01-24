@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron --no-sandbox src/main.js",
+    "start": "node ./scripts/start.sh",
     "build": "node scripts/build.js",
     "test": "jest",
     "test:watch": "jest --watch",
