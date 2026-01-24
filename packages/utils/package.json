@@ -1,0 +1,16 @@
+{
+  "name": "@electron-mcp/utils",
+  "version": "1.0.0",
+  "description": "Shared utility functions for Electron MCP",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": ["utils", "electron", "mcp"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}

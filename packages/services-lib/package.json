@@ -1,0 +1,19 @@
+{
+  "name": "@electron-mcp/services-lib",
+  "version": "1.0.0",
+  "description": "Services library for Electron MCP",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": ["services", "electron", "mcp"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@electron-mcp/utils": "^1.0.0",
+    "@electron-mcp/common-lib": "^1.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}

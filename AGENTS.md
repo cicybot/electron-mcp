@@ -7,31 +7,49 @@ This is an Electron-based MCP (Model Context Protocol) application that provides
 ## Development Commands
 
 ### Build & Run
+
 ```bash
 npm start              # Start the Electron application
 npm run build          # Build the application (node scripts/build.js)
 ```
 
 ### Testing
+
 ```bash
 npm test               # Run all tests
 npm run test:watch     # Run tests in watch mode
 npm run test:coverage # Run tests with coverage report
-```
 
-#### Running Single Tests
-```bash
-# Run a specific test file
+# Run specific test files
 npx jest tests/test-electron-run.test.js
+npx jest tests/test-mcp-api.test.js
 
-# Run tests matching a pattern
-npx jest --testNamePattern="RPC /rpc responds to getWindows"
-
-# Run tests in watch mode for a specific file
-npx jest --watch tests/test-electron-run.test.js
+# Run tests in specific directory
+npx jest tests/
 ```
+
+#### Test Environment Setup
+
+Tests automatically check if the Electron MCP backend is running on port 3456. If not running, they will:
+
+1. Start the Electron backend using `npm start`
+2. Wait for the backend to be ready (port 3456 open)
+3. Run the test suite
+4. Clean up resources after completion
+
+#### Test Utilities
+
+Common test functionality is available in `tests/test-utils.js`:
+
+- `postRpc(payload)` - Send RPC requests to the backend
+- `ensureBackendUp()` - Start backend if not running
+- `isPortOpen(port)` - Check if port is available
+- `getFirstWindowId()` - Get first available window ID
+- `createTestWindow(url, options)` - Create a test window
+- `cleanupTestWindows(windowIds)` - Clean up test windows
 
 ### Code Quality
+
 ```bash
 npm run format         # Format all JavaScript files with Prettier
 npm run format:check   # Check formatting without modifying files
@@ -40,12 +58,14 @@ npm run format:check   # Check formatting without modifying files
 ## Code Style Guidelines
 
 ### General Principles
+
 - Use modular architecture with clear separation of concerns
 - Prefer ES6+ features (async/await, destructuring, arrow functions)
 - Follow consistent error handling patterns
 - Use JSDoc comments for complex functions and classes
 
 ### Import Conventions
+
 ```javascript
 // Core Node.js modules first
 const fs = require("fs");
@@ -61,6 +81,7 @@ const { MapArray } = require("../common/utils");
 ```
 
 ### Formatting Rules (Prettier Configuration)
+
 - **Semicolons**: Required (`semi: true`)
 - **Quotes**: Double quotes (`singleQuote: false`)
 - **Trailing Commas**: ES5 compatible (`trailingComma: "es5"`)
@@ -70,12 +91,13 @@ const { MapArray } = require("../common/utils");
 - **Line Endings**: LF (`endOfLine: "lf"`)
 
 ### Naming Conventions
+
 ```javascript
 // Classes: PascalCase
-class WindowManager { }
+class WindowManager {}
 
 // Functions and variables: camelCase
-function createWindow() { }
+function createWindow() {}
 const mainWindowId = 1;
 
 // Constants: UPPER_SNAKE_CASE
@@ -86,6 +108,7 @@ const ELECTRON_BASE_API_URL = "http://127.0.0.1:3456";
 ```
 
 ### Error Handling Patterns
+
 ```javascript
 // Use try-catch with async/await
 async function fetchData() {
@@ -100,9 +123,10 @@ async function fetchData() {
 
 // For Promise-based operations
 function fetchUser(id) {
-  return pool.query("SELECT * FROM users WHERE id = ?", [id])
+  return pool
+    .query("SELECT * FROM users WHERE id = ?", [id])
     .then(([rows]) => rows[0])
-    .catch(error => {
+    .catch((error) => {
       console.error("[Database] Failed to fetch user:", error);
       throw error;
     });
@@ -110,6 +134,7 @@ function fetchUser(id) {
 ```
 
 ### Type Safety and Validation
+
 ```javascript
 // Use Zod for runtime validation where applicable
 const { z } = require("zod");
@@ -127,27 +152,29 @@ function createUser(userData) {
 ```
 
 ### Database Operations
+
 ```javascript
 // Use async/await with connection pooling
 const { pool } = require("./db");
 
 const userDB = {
   async createUser(username, email) {
-    const [result] = await pool.query(
-      "INSERT INTO users (username, email) VALUES (?, ?)",
-      [username, email]
-    );
+    const [result] = await pool.query("INSERT INTO users (username, email) VALUES (?, ?)", [
+      username,
+      email,
+    ]);
     return result.insertId;
   },
 
   async getUsers() {
     const [rows] = await pool.query("SELECT * FROM users");
     return rows;
-  }
+  },
 };
 ```
 
 ### Electron-Specific Patterns
+
 ```javascript
 // Browser window management
 class WindowManager {
@@ -165,9 +192,9 @@ class WindowManager {
         contextIsolation: true,
         // ... other security options
       },
-      ...options
+      ...options,
     });
-    
+
     return win;
   }
 }
@@ -177,7 +204,7 @@ app.on("browser-window-created", (event, win) => {
   win.webContents.on("did-finish-load", async () => {
     console.log(`[WindowManager] Window ${win.id} finished loading`);
   });
-  
+
   win.on("closed", () => {
     console.log(`[WindowManager] Window ${win.id} closed`);
     // Cleanup resources
@@ -186,6 +213,7 @@ app.on("browser-window-created", (event, win) => {
 ```
 
 ### Logging Conventions
+
 ```javascript
 // Use structured logging with context tags
 console.log("[WindowManager] Creating new window:", options);
@@ -199,6 +227,7 @@ if (process.env.NODE_ENV === "development") {
 ```
 
 ### Testing Guidelines
+
 ```javascript
 // Test files should be in tests/ directory with .test.js extension
 // Use Jest with node environment
@@ -206,7 +235,7 @@ describe("Window Manager functionality", () => {
   test("should create window with correct options", async () => {
     const windowManager = new WindowManager();
     const window = windowManager.createWindow({ width: 800 });
-    
+
     expect(window.getBounds().width).toBe(800);
   });
 });
@@ -215,19 +244,55 @@ describe("Window Manager functionality", () => {
 ## Architecture Notes
 
 ### Module Structure
+
 ```
-src/
-├── main.js              # Application entry point
-├── core/                # Core application logic
-├── server/              # Express server and RPC handlers
-├── db/                  # Database models and operations
-├── browser/             # Browser-related functionality
-├── services/            # Business logic services
-├── common/              # Shared utilities
-└── helpers.js           # Helper functions
+apps/electron/
+├── main.js                    # Application entry point
+├── core/                      # Core application logic
+│   ├── app-manager.js         # Application lifecycle management
+│   ├── window-manager.js      # Browser window operations
+│   ├── account-manager.js     # User account management
+│   ├── storage-manager.js     # Local storage operations
+│   └── menu-manager.js       # Application menus
+├── server/                    # Express server and RPC handlers
+│   ├── express-server.js      # HTTP server setup
+│   ├── rpc-handler.js         # RPC method dispatcher
+│   └── mcp-integration.js    # MCP protocol integration
+├── db/                        # Database models and operations
+│   ├── db.js                 # Database connection setup
+│   └── user.js               # User model operations
+├── services/                  # Business logic services
+│   ├── window-open-handler.js # Window opening logic
+│   ├── screenshot-cache-service.js # Screenshot caching
+│   └── network-monitor.js    # Network request monitoring
+├── browser/                   # Browser-related functionality
+│   ├── content-inject.js      # Content script injection
+│   ├── utils-browser.js       # Browser utilities
+│   └── extension/            # Browser extension files
+├── common/                    # Shared utilities
+│   ├── utils.js              # Shared utilities
+│   └── utils-node.js         # Node.js specific utilities
+├── tests/                     # Test files
+│   ├── test-utils.js          # Common test utilities
+│   ├── test-electron-run.test.js # Basic functionality tests
+│   └── test-mcp-api.test.js  # MCP API comprehensive tests
+└── helpers.js                 # Helper functions
 ```
 
+src/
+├── main.js # Application entry point
+├── core/ # Core application logic
+├── server/ # Express server and RPC handlers
+├── db/ # Database models and operations
+├── browser/ # Browser-related functionality
+├── services/ # Business logic services
+├── common/ # Shared utilities
+└── helpers.js # Helper functions
+
+````
+
 ### Key Dependencies
+
 - **Electron**: Desktop application framework
 - **Express**: HTTP server for RPC API
 - **MySQL2**: Database driver with async/await support
@@ -236,6 +301,7 @@ src/
 - **Prettier**: Code formatting
 
 ### Security Considerations
+
 - Use `contextIsolation: true` and `nodeIntegration: false` in webPreferences
 - Validate all user input with Zod schemas
 - Use parameterized queries for database operations
@@ -244,6 +310,7 @@ src/
 ## Common Patterns
 
 ### RPC Method Structure
+
 ```javascript
 // In rpc-handler.js
 async function handleRpcCall(method, params) {
@@ -261,22 +328,23 @@ async function handleRpcCall(method, params) {
     return { ok: false, error: error.message };
   }
 }
-```
+````
 
 ### Resource Cleanup
+
 ```javascript
 // Always clean up resources in shutdown handlers
 async function shutdown() {
   this.isShuttingDown = true;
-  
+
   // Clear intervals
   if (this.autoSaveInterval) {
     clearInterval(this.autoSaveInterval);
   }
-  
+
   // Close database connections
   await pool.end();
-  
+
   // Close all windows
   for (const win of BrowserWindow.getAllWindows()) {
     win.close();
