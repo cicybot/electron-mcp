@@ -104,8 +104,6 @@ class WindowManager {
     const winId = win.id;
     const wcId = wc.id;
 
-    // Set up session and proxy if specified
-    // await wc.session.setProxy({ proxyRules: "http://localhost:8082" });
 
     if (proxy) {
       await wc.session.setProxy({ proxyRules: proxy });
@@ -113,10 +111,10 @@ class WindowManager {
     }
 
     // Set cookies if provided, otherwise use default cookies
-    const cookiesToSet = cookies || global.defaultCookies;
-    if (cookiesToSet) {
-      await setCookies(wc, cookiesToSet);
-    }
+    // const cookiesToSet = cookies || global.defaultCookies;
+    // if (cookiesToSet) {
+    //   await setCookies(wc, cookiesToSet);
+    // }
 
     // Open dev tools if requested
     if (openDevtools && openDevtools.mode) {

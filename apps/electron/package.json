@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node scripts/start.sh",
     "build": "node scripts/build.js",
+    "build:auto": "nodemon",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

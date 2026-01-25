@@ -295,9 +295,9 @@ const getGlobalJsCode = () => {
   if (fs.existsSync(p)) {
     g = fs.readFileSync(path.join(__dirname, "content.js")).toString();
   }
-  const p1 = path.join(__dirname, "../dist/content.js");
+  const p1 = path.join(__dirname, "dist/content.js");
   if (fs.existsSync(p1)) {
-    g += fs.readFileSync(path.join(__dirname, "../dist/content.js")).toString();
+    g += fs.readFileSync(path.join(__dirname, "dist/content.js")).toString();
   }
   return g;
 };

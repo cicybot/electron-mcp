@@ -39,12 +39,12 @@ const openInElectron = async (tab) => {
   openWindow(
     url,
     {
-      width: 1460,
+      width: 1024,
     },
     {
       cookies,
       showWin: true,
-      openDevtools: { mode: "right" },
+      //openDevtools: { mode: "right" },
     }
   );
 };

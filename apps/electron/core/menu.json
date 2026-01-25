@@ -35,6 +35,29 @@
             }
           }
         ]
+      }, { "type": "separator" },
+      {
+        "label": "Opencode Local",
+        "submenu": [
+          {
+            "label": "Opencode 2345",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "http://localhost:2345",
+              "options": {}
+            }
+          },
+          {
+            "label": "Opencode 2346",
+            "action": "createWindow",
+            "params": {
+              "index": 0,
+              "url": "http://localhost:2346",
+              "options": {}
+            }
+          }
+        ]
       },
       { "type": "separator" },
       {
@@ -45,6 +68,15 @@
             "action": "createWindow",
             "params": {
               "index": 0,
+              "url": "https://www.google.com",
+              "options": {}
+            }
+          },
+          {
+            "label": "Google_1",
+            "action": "createWindow",
+            "params": {
+              "index": 1,
               "url": "https://www.google.com",
               "options": {}
             }
@@ -63,6 +95,16 @@
             "action": "createWindow",
             "params": {
               "index": 0,
+              "url": "https://colab.research.google.com/",
+              "options": {}
+            }
+          },
+
+          {
+            "label": "Colab_1",
+            "action": "createWindow",
+            "params": {
+              "index": 1,
               "url": "https://colab.research.google.com/",
               "options": {}
             }
